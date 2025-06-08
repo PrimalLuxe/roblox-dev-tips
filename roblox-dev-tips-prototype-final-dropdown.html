@@ -4,262 +4,330 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Lua Dev Tips — Just Tips Bro</title>
+<title>Roblox Script Snippet Manager</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Fira+Mono&display=swap');
+  body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background: #121212; color: #eee; display: flex; flex-direction: column; min-height: 100vh; }
+  header { background: #1e1e1e; padding: 1em; text-align: center; font-size: 1.5em; letter-spacing: 2px; }
+  #tabBar { display: flex; background: #222; overflow-x: auto; }
+  .tab { padding: 0.5em 1em; cursor: pointer; user-select: none; border-bottom: 3px solid transparent; transition: border-color 0.3s; white-space: nowrap; }
+  .tab.active { border-bottom-color: #1db954; color: #1db954; font-weight: bold; }
+  #addTabBtn { padding: 0.5em 1em; background: #1db954; color: black; font-weight: bold; border: none; cursor: pointer; }
+  #content { padding: 1em; max-width: 800px; margin: auto; flex-grow: 1; display: flex; flex-direction: column; }
+  textarea { width: 100%; height: 200px; background: #222; color: #eee; border: none; resize: vertical; padding: 10px; font-family: monospace; font-size: 1em; border-radius: 6px; }
+  input[type="text"] { padding: 6px 8px; border-radius: 6px; border: none; width: 200px; font-size: 1em; margin-right: 10px; }
+  button { background: #1db954; border: none; color: black; font-weight: bold; padding: 6px 12px; border-radius: 6px; cursor: pointer; transition: background-color 0.3s; }
+  button:hover { background: #17a444; }
+  #tagsContainer { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 8px; }
+  .tagBox { background: #1db954; padding: 4px 10px; border-radius: 12px; font-weight: 600; letter-spacing: 0.5px; user-select: none; display: flex; align-items: center; }
+  .tagBox .removeTag { margin-left: 6px; cursor: pointer; font-weight: bold; }
+  #tagInput { width: 150px; }
+  #buttonsRow { margin-top: 10px; }
+  #snippetList { margin-top: 10px; background: #222; border-radius: 6px; max-height: 180px; overflow-y: auto; padding: 8px; }
+  .snippetItem { padding: 6px 10px; cursor: pointer; border-radius: 6px; user-select: none; }
+  .snippetItem:hover { background: #1db954; color: black; }
+  .snippetItem.active { background: #1db954; color: black; font-weight: bold; }
+  footer { background: #1e1e1e; padding: 0.5em; text-align: center; font-size: 0.85em; color: #888; margin-top: auto; }
+</style>
+</head>
+<body>
 
-  body {
-    margin: 0; padding: 0;
-    background: #121212;
-    color: #ddd;
-    font-family: 'Fira Mono', monospace;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    min-height: 100vh;
-    padding: 2rem;
+<header>Roblox Script Snippet Manager - Reload to add a new snippit</header>
+
+<div id="tabBar">
+  <!-- tabs will be inserted here -->
+  <button id="addTabBtn">+ Add Tab</button>
+</div>
+
+<div id="content">
+  <input type="text" id="snippetTitle" placeholder="Snippet Title" />
+  <input type="text" id="tagInput" placeholder="Add tag (e.g. vfx)" />
+  <button id="addTagBtn">Add Tag</button>
+  <div id="tagsContainer"></div>
+  <textarea id="snippetContent" placeholder="Paste your Roblox Lua script here..."></textarea>
+  <div id="buttonsRow">
+    <button id="saveBtn">Save Snippet</button>
+    <button id="copyBtn">Copy Snippet</button>
+    <button id="deleteBtn">Delete Snippet</button>
+  </div>
+  <div id="snippetList"></div>
+</div>
+
+<footer>Made by <a href="https://www.roblox.com/users/4233358105/profile#!/about" target="_blank" rel="noopener noreferrer" style="color:#1db954; text-decoration:none;">Primalluxe</a></footer>
+
+<script>
+  const TAB_STORAGE_KEY = 'roblox_snippet_tabs';
+  let tabs = [];
+  let activeTabId = null;
+  let activeSnippetId = null;
+  const popularTags = ["VFX","LOCAL","SERVER","SCRIPT","ADMIN","DEV","TEST","UI","PLUGIN"];
+
+  function normalizeTag(input) {
+    const clean = input.toLowerCase().replace(/\s+/g, '');
+    for (const tag of popularTags) {
+      if (tag.toLowerCase() === clean) return tag;
+      const pattern = tag.toLowerCase().split('').join('.*');
+      if (new RegExp(pattern).test(clean)) return tag;
+    }
+    return input.charAt(0).toUpperCase() + input.slice(1);
   }
 
-  header {
-    font-size: 3rem;
-    font-weight: 700;
-    color: #00cfff;
-    margin-bottom: 2rem;
-    text-shadow: 0 0 10px #00cfff88;
+  function saveTabs() {
+    localStorage.setItem(TAB_STORAGE_KEY, JSON.stringify(tabs));
   }
 
-  nav {
-    display: flex;
-    gap: 1rem;
-    margin-bottom: 2rem;
-    flex-wrap: wrap;
-    justify-content: center;
-  }
-
-  nav button {
-    background: #1f1f2f;
-    border: none;
-    padding: 0.5rem 1rem;
-    color: #ddd;
-    border-bottom: 2px solid transparent;
-    cursor: pointer;
-    transition: 0.3s;
-  }
-
-  nav button.active {
-    border-bottom: 2px solid #00cfff;
-    color: #00cfff;
-  }
-
-  .container {
-    width: 100%;
-    max-width: 700px;
-  }
-
-  .tip {
-    background: #1f1f2f;
-    border-left: 6px solid #00cfff;
-    border-radius: 6px;
-    padding: 1rem 1.5rem;
-    margin-bottom: 1rem;
-    box-shadow: 0 2px 6px #0009;
-    opacity: 0;
-    transform: translateX(-40px);
-    animation: slideIn 0.5s forwards;
-  }
-
-  .tip:nth-child(even) {
-    border-color: #ff6f91;
-  }
-
-  .tip code {
-    background: #2e2e42;
-    padding: 2px 5px;
-    border-radius: 3px;
-    font-weight: 700;
-    color: #f07178;
-  }
-
-  @keyframes slideIn {
-    to {
-      opacity: 1;
-      transform: translateX(0);
+  function loadTabs() {
+    const stored = localStorage.getItem(TAB_STORAGE_KEY);
+    if (stored) {
+      try {
+        tabs = JSON.parse(stored);
+      } catch {
+        tabs = [];
+      }
     }
   }
 
-  .tip-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    cursor: pointer;
+  function genId() {
+    return Math.random().toString(36).slice(2, 10);
   }
 
-  .tip-arrow {
-    transition: transform 0.3s ease;
+  function renderTabs() {
+    const tabBar = document.getElementById('tabBar');
+    tabBar.querySelectorAll('.tab').forEach(el => el.remove());
+    for (const tab of tabs) {
+      const el = document.createElement('div');
+      el.className = 'tab';
+      if (tab.id === activeTabId) el.classList.add('active');
+      el.textContent = ''; 
+      const span = document.createElement('span');
+      span.textContent = tab.name || 'Untitled Tab';
+      el.appendChild(span);
+      const delBtn = document.createElement('span');
+      delBtn.textContent = ' ×';
+      delBtn.style.marginLeft = '6px';
+      delBtn.style.color = '#f55';
+      delBtn.style.cursor = 'pointer';
+      delBtn.onclick = (e) => {
+        e.stopPropagation();
+        if (confirm('Delete this tab?')) {
+          tabs = tabs.filter(t => t.id !== tab.id);
+          if (activeTabId === tab.id) {
+            activeTabId = tabs.length ? tabs[0].id : null;
+            activeSnippetId = null;
+          }
+          saveTabs();
+          renderTabs();
+          renderSnippetList();
+          clearSnippetEditor();
+        }
+      };
+      el.appendChild(delBtn);
+      el.title = tab.name || 'Untitled Tab';
+      el.onclick = () => {
+        if (activeTabId !== tab.id) {
+          activeTabId = tab.id;
+          activeSnippetId = null;
+          renderTabs();
+          renderSnippetList();
+          clearSnippetEditor();
+        }
+      };
+      tabBar.insertBefore(el, document.getElementById('addTabBtn'));
+    }
   }
 
-  .tip.open .tip-arrow {
-    transform: rotate(90deg);
+  // Render snippet list (titles clickable)
+  function renderSnippetList() {
+    const list = document.getElementById('snippetList');
+    list.innerHTML = '';
+    if (!activeTabId) return;
+    const tab = tabs.find(t => t.id === activeTabId);
+    if (!tab || !tab.snippets) return;
+    for (const snippet of tab.snippets) {
+      const item = document.createElement('div');
+      item.className = 'snippetItem' + (snippet.id === activeSnippetId ? ' active' : '');
+      item.textContent = snippet.title;
+      item.title = snippet.title + (snippet.tags && snippet.tags.length ? ' | Tags: ' + snippet.tags.join(', ') : '');
+      item.onclick = () => {
+        activeSnippetId = snippet.id;
+        loadSnippetToEditor(snippet.id);
+        renderSnippetList();
+      };
+      list.appendChild(item);
+    }
   }
 
-  .tip-code {
-    display: none;
-    margin-top: 0.5rem;
+  function loadSnippetToEditor(snippetId) {
+    if (!activeTabId) return;
+    const tab = tabs.find(t => t.id === activeTabId);
+    if (!tab) return;
+    const snippet = tab.snippets.find(s => s.id === snippetId);
+    if (!snippet) return;
+    activeSnippetId = snippet.id;
+    document.getElementById('snippetTitle').value = snippet.title;
+    document.getElementById('snippetContent').value = snippet.content;
+    renderTags(snippet.tags);
   }
 
-  .tip.open .tip-code {
-    display: block;
+  function clearSnippetEditor() {
+    activeSnippetId = null;
+    document.getElementById('snippetTitle').value = '';
+    document.getElementById('snippetContent').value = '';
+    renderTags([]);
   }
-</style>
 
-</head>
-<body>
-<header>Lua Dev Tips — Just Tips Bro</header>
-<nav id="tabs">
-  <button class="active" onclick="switchTab('general')">General</button>
-  <button onclick="switchTab('localscripts')">LocalScript Tips</button>
-  <button onclick="switchTab('character')">Character Control</button>
-  <button onclick="switchTab('camera')">Camera</button>
-  <button onclick="switchTab('remote')">Remote Events</button>
-</nav>
-<div class="container" id="tips-container">
-</div>
-
-<script>
-  const tips = {
-    general: [
-      "Use <code>local</code> for variables to keep things fast and tidy:<br><code>local score = 0</code>",
-      "Simplify boolean checks:<br><code>if player.isAlive then ... end</code>",
-      "Use <code>pcall</code> to catch errors:<br><code>local ok, err = pcall(function() risky() end)</code>",
-      "Loop arrays:<br><code>for i=1,#arr do print(arr[i]) end</code>",
-      "Use <code>require()</code> to manage modules cleanly.",
-      "Avoid globals; use modules and <code>local</code>.",
-      "Use <code>string.format()</code> for clean text output.",
-      "Use comments for why, not what.",
-      "Use <code>table.insert()</code> for cleaner lists.",
-      "Use <code>assert()</code> to stop bugs early.",
-      "Avoid deep nesting: <code>if not ready then return end</code>",
-      "Lua arrays start at 1, not 0.",
-      "Use <code>pairs()</code> for key-value loops.",
-      "Use <code>#table</code> to count elements.",
-      "Use <code>string.match()</code> instead of regex.",
-      "Use <code>select()</code> for varargs.",
-      "Learn <code>coroutines</code> carefully.",
-      "Avoid string concat in loops: use <code>table.concat()</code>",
-      "Consistent naming: <code>camelCase</code> or <code>snake_case</code>",
-      "Debug with <code>print()</code> or <code>warn()</code>"
-    ],
-    localscripts: [
-      "Run GUI logic in <code>LocalScripts</code> for faster results.",
-      "Use <code>PlayerGui</code> for interface changes.",
-      "Use <code>game.Players.LocalPlayer</code> to get the player.",
-      "Access mouse: <code>LocalPlayer:GetMouse()</code>",
-      "Avoid <code>wait()</code> in loops, use <code>RunService</code>.",
-      "Use <code>UserInputService</code> for keyboard/mouse detection.",
-      "LocalScripts can't access server-only stuff like <code>Workspace.Terrain</code>.",
-      "Use <code>ReplicatedStorage</code> to send data to server.",
-      "Use <code>BindableEvent</code> for UI-to-UI signaling.",
-      "Use <code>ContextActionService</code> to bind hotkeys.",
-      "Change text: <code>TextLabel.Text = 'Hello!'</code>",
-      "Play local sounds: <code>Sound:Play()</code>",
-      "Don’t do datastores in localscripts!",
-      "Use <code>TweenService</code> for animations.",
-      "Use <code>StarterGui:SetCore()</code> for notifications.",
-      "Check input types: <code>if input.UserInputType == Enum.UserInputType.Keyboard</code>",
-      "Use <code>Humanoid.Jump</code> to detect jumps.",
-      "Use <code>Mouse.Move</code> for hover UI effects.",
-      "Keep LocalScripts small and focused.",
-      "Only use them where necessary — not in every object!"
-    ],
-    character: [
-      "Use <code>Humanoid.WalkSpeed</code> to control speed.",
-      "Use <code>Humanoid.JumpPower</code> to control jump height.",
-      "Detect death: <code>Humanoid.Died:Connect(function() ... end)</code>",
-      "Get character: <code>player.Character or player.CharacterAdded:Wait()</code>",
-      "Change appearance: insert parts into <code>Character</code>.",
-      "Make tools interact: place them in <code>StarterPack</code>.",
-      "Use <code>Animator</code> to play animations.",
-      "Detect land with <code>Humanoid.StateChanged</code>.",
-      "Disable movement: <code>Humanoid.WalkSpeed = 0</code>",
-      "Reposition with <code>HumanoidRootPart.CFrame = CFrame.new(...)</code>",
-      "Use <code>CharacterAppearanceLoaded</code> to wait before modifying.",
-      "Use <code>Humanoid:GetState()</code> for advanced control.",
-      "Cloning characters? Reset <code>Archivable</code> to true.",
-      "Teleport player: <code>HumanoidRootPart.Position = Vector3.new(x, y, z)</code>",
-      "Create ragdoll effects by disabling <code>Motor6Ds</code>.",
-      "Use <code>StarterCharacterScripts</code> for custom movement code.",
-      "Make invisible: <code>part.Transparency = 1</code> & <code>CanCollide = false</code>",
-      "Limit jump height server-side for security.",
-      "Use <code>CharacterAdded</code> event for custom spawn behavior.",
-      "Clean up parts on death for performance."
-    ],
-    camera: [
-      "Get camera: <code>workspace.CurrentCamera</code>",
-      "Set to scriptable: <code>camera.CameraType = 'Scriptable'</code>",
-      "Follow object: <code>camera.CameraSubject = part</code>",
-      "Change FOV: <code>camera.FieldOfView = 70</code>",
-      "Use <code>TweenService</code> to smoothly move the camera.",
-      "Zoom in: <code>camera.CFrame = CFrame.new(...)</code>",
-      "First-person: <code>Camera.CameraType = 'Custom'</code>",
-      "Use <code>RenderStepped</code> to update each frame.",
-      "Use <code>InputChanged</code> to control camera movement.",
-      "Camera shake: apply offsets randomly each frame.",
-      "Use <code>CameraOffset</code> on Humanoid for simple effects.",
-      "Change perspective: top-down, isometric, etc.",
-      "Lock to object: <code>Camera.CameraSubject = object</code>",
-      "Use <code>Camera.CFrame:Lerp()</code> to smooth move.",
-      "Add UI overlays via <code>PlayerGui</code>.",
-      "Use <code>RunService:BindToRenderStep()</code> for high-priority tracking.",
-      "Animate zoom with <code>TweenService</code>.",
-      "Combine camera and UI changes for cutscenes.",
-      "Don’t forget to reset <code>CameraType</code> when done!",
-      "Handle mobile and PC separately for smoother feel."
-    ],
-    remote: [
-      "Use <code>RemoteEvent</code> for server-client communication.",
-      "Place remotes in <code>ReplicatedStorage</code>.",
-      "Send data: <code>RemoteEvent:FireServer(data)</code>",
-      "Listen server: <code>RemoteEvent.OnServerEvent:Connect(...)</code>",
-      "Validate input on the server!",
-      "Use <code>RemoteFunction</code> for callbacks.",
-      "Use <code>pcall</code> for remote function safety.",
-      "Never trust the client for security.",
-      "Use events for button presses: <code>OnClientEvent</code>",
-      "Fire to specific player: <code>RemoteEvent:FireClient(player, data)</code>",
-      "Use <code>:FireAllClients()</code> for global updates.",
-      "Organize remotes in folders for clarity.",
-      "Use <code>BindableEvent</code> locally, not remotes.",
-      "Name your remotes clearly: <code>UpdateHealth</code>, <code>GiveItem</code>, etc.",
-      "Throttle remote usage to avoid lag.",
-      "Never send sensitive data to client.",
-      "Use <code>WaitForChild</code> to avoid nil errors.",
-      "Use <code>:InvokeClient()</code> carefully — clients may not respond.",
-      "Wrap logic in server handlers to avoid crashes.",
-      "Keep remote logic modular and short."
-    ]
-  };
-
-  const container = document.getElementById('tips-container');
-
-  function renderTips(tab) {
+  function renderTags(tags) {
+    const container = document.getElementById('tagsContainer');
     container.innerHTML = '';
-    tips[tab].forEach((tip, i) => {
-      const div = document.createElement('div');
-      div.className = 'tip';
-      div.style.animationDelay = `${i * 0.08}s`;
-      div.innerHTML = tip;
-      container.appendChild(div);
+    if (!tags) return;
+    for (const tag of tags) {
+      const box = document.createElement('div');
+      box.className = 'tagBox';
+      box.textContent = tag;
+      const removeBtn = document.createElement('span');
+      removeBtn.className = 'removeTag';
+      removeBtn.textContent = '×';
+      removeBtn.title = 'Remove tag';
+      removeBtn.onclick = (e) => {
+        e.stopPropagation();
+        removeTag(tag);
+      };
+      box.appendChild(removeBtn);
+      container.appendChild(box);
+    }
+  }
+
+  function getCurrentTags() {
+    const container = document.getElementById('tagsContainer');
+    return Array.from(container.children).map(tagBox => tagBox.textContent.slice(0, -1));
+  }
+
+  function addTag(tagInput) {
+    const normalized = normalizeTag(tagInput.trim());
+    if (!normalized) return;
+    let tags = getCurrentTags();
+    if (!tags.includes(normalized)) {
+      tags.push(normalized);
+      renderTags(tags);
+    }
+    document.getElementById('tagInput').value = '';
+  }
+
+  function removeTag(tag) {
+    let tags = getCurrentTags();
+    tags = tags.filter(t => t !== tag);
+    renderTags(tags);
+  }
+
+  function saveSnippet() {
+    const title = document.getElementById('snippetTitle').value.trim() || 'Untitled Snippet';
+    const content = document.getElementById('snippetContent').value;
+    const tags = getCurrentTags();
+    if (!activeTabId) {
+      alert('Please add and select a tab first.');
+      return;
+    }
+    let tab = tabs.find(t => t.id === activeTabId);
+    if (!tab.snippets) tab.snippets = [];
+    if (activeSnippetId) {
+      const snippet = tab.snippets.find(s => s.id === activeSnippetId);
+      if (snippet) {
+        snippet.title = title;
+        snippet.content = content;
+        snippet.tags = tags;
+      }
+    } else {
+      const newSnippet = {
+        id: genId(),
+        title,
+        content,
+        tags
+      };
+      tab.snippets.push(newSnippet);
+      activeSnippetId = newSnippet.id;
+    }
+    saveTabs();
+    renderSnippetList();
+    alert('Snippet saved!');
+  }
+
+  function deleteSnippet() {
+    if (!activeTabId || !activeSnippetId) {
+      alert('No snippet selected to delete.');
+      return;
+    }
+    let tab = tabs.find(t => t.id === activeTabId);
+    if (!tab || !tab.snippets) return;
+    tab.snippets = tab.snippets.filter(s => s.id !== activeSnippetId);
+    activeSnippetId = null;
+    saveTabs();
+    renderSnippetList();
+    clearSnippetEditor();
+  }
+
+  function copySnippet() {
+    const content = document.getElementById('snippetContent').value;
+    if (!content) return alert('No snippet content to copy.');
+    navigator.clipboard.writeText(content).then(() => {
+      alert('Snippet copied to clipboard!');
+    }).catch(() => {
+      alert('Failed to copy snippet.');
     });
   }
 
-  function switchTab(tab) {
-    document.querySelectorAll('nav button').forEach(btn => btn.classList.remove('active'));
-    event.target.classList.add('active');
-    renderTips(tab);
+  function addTab() {
+    let tabName = prompt('Enter new tab name:', 'New Tab');
+    if (!tabName) return;
+    tabName = tabName.trim();
+    if (tabName.length === 0) return alert('Tab name cannot be empty.');
+    // Check for duplicate (case insensitive)
+    if (tabs.some(t => t.name.toLowerCase() === tabName.toLowerCase())) {
+      return alert('A tab with that name already exists.');
+    }
+    tabs.push({ id: genId(), name: tabName, snippets: [] });
+    activeTabId = tabs[tabs.length - 1].id;
+    activeSnippetId = null;
+    saveTabs();
+    renderTabs();
+    renderSnippetList();
+    clearSnippetEditor();
   }
 
-  // Initial render
-  renderTips('general');
+  function init() {
+    loadTabs();
+    if (tabs.length === 0) {
+      tabs.push({ id: genId(), name: 'Default', snippets: [] });
+    }
+    activeTabId = tabs[0].id;
+    renderTabs();
+    renderSnippetList();
+    clearSnippetEditor();
+
+    document.getElementById('addTabBtn').onclick = addTab;
+    document.getElementById('addTagBtn').onclick = () => {
+      const tagInput = document.getElementById('tagInput').value;
+      if (tagInput.trim() !== '') {
+        addTag(tagInput);
+      }
+    };
+    document.getElementById('saveBtn').onclick = saveSnippet;
+    document.getElementById('deleteBtn').onclick = () => {
+      if (confirm('Are you sure you want to delete this snippet?')) deleteSnippet();
+    };
+    document.getElementById('copyBtn').onclick = copySnippet;
+
+    document.getElementById('tagInput').addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const tagInput = document.getElementById('tagInput').value;
+        if (tagInput.trim() !== '') {
+          addTag(tagInput);
+        }
+      }
+    });
+  }
+
+  window.onload = init;
 </script>
+
 </body>
 </html>
