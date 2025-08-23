@@ -1,333 +1,357 @@
-
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
+<meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Roblox Script Snippet Manager</title>
+<title>⚽ Football Wordle</title>
 <style>
-  body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background: #121212; color: #eee; display: flex; flex-direction: column; min-height: 100vh; }
-  header { background: #1e1e1e; padding: 1em; text-align: center; font-size: 1.5em; letter-spacing: 2px; }
-  #tabBar { display: flex; background: #222; overflow-x: auto; }
-  .tab { padding: 0.5em 1em; cursor: pointer; user-select: none; border-bottom: 3px solid transparent; transition: border-color 0.3s; white-space: nowrap; }
-  .tab.active { border-bottom-color: #1db954; color: #1db954; font-weight: bold; }
-  #addTabBtn { padding: 0.5em 1em; background: #1db954; color: black; font-weight: bold; border: none; cursor: pointer; }
-  #content { padding: 1em; max-width: 800px; margin: auto; flex-grow: 1; display: flex; flex-direction: column; }
-  textarea { width: 100%; height: 200px; background: #222; color: #eee; border: none; resize: vertical; padding: 10px; font-family: monospace; font-size: 1em; border-radius: 6px; }
-  input[type="text"] { padding: 6px 8px; border-radius: 6px; border: none; width: 200px; font-size: 1em; margin-right: 10px; }
-  button { background: #1db954; border: none; color: black; font-weight: bold; padding: 6px 12px; border-radius: 6px; cursor: pointer; transition: background-color 0.3s; }
-  button:hover { background: #17a444; }
-  #tagsContainer { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 8px; }
-  .tagBox { background: #1db954; padding: 4px 10px; border-radius: 12px; font-weight: 600; letter-spacing: 0.5px; user-select: none; display: flex; align-items: center; }
-  .tagBox .removeTag { margin-left: 6px; cursor: pointer; font-weight: bold; }
-  #tagInput { width: 150px; }
-  #buttonsRow { margin-top: 10px; }
-  #snippetList { margin-top: 10px; background: #222; border-radius: 6px; max-height: 180px; overflow-y: auto; padding: 8px; }
-  .snippetItem { padding: 6px 10px; cursor: pointer; border-radius: 6px; user-select: none; }
-  .snippetItem:hover { background: #1db954; color: black; }
-  .snippetItem.active { background: #1db954; color: black; font-weight: bold; }
-  footer { background: #1e1e1e; padding: 0.5em; text-align: center; font-size: 0.85em; color: #888; margin-top: auto; }
+  :root{
+    --bg:#0b0c10; --panel:#111827; --tile:#1f2937; --ink:#e5e7eb;
+    --correct:#6aaa64; --present:#c9b458; --absent:#787c7e;
+    --accent:#22d3ee; --muted:#9ca3af;
+  }
+  html,body{height:100%}
+  body{
+    margin:0; background:radial-gradient(1200px 600px at 85% -10%,rgba(34,211,238,.12),transparent),
+              radial-gradient(900px 500px at -10% 10%,rgba(99,102,241,.12),transparent),
+              var(--bg);
+    color:var(--ink); font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Ubuntu,"Helvetica Neue",Arial,sans-serif;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .app{width:min(95vw,720px); display:grid; grid-template-rows:auto auto 1fr auto; gap:14px}
+  header{display:flex; align-items:center; justify-content:space-between; padding:10px 4px}
+  .title{font-weight:800; letter-spacing:.5px}
+  .pill{font-size:.85rem; color:var(--bg); background:linear-gradient(90deg,#22d3ee,#60a5fa);
+        padding:6px 10px; border-radius:999px; user-select:none}
+  .panel{background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.06); border-radius:14px}
+  .board{display:grid; grid-template-rows:repeat(6,1fr); gap:8px; padding:16px}
+  .row{display:grid; grid-template-columns:repeat(5,1fr); gap:8px}
+  .tile{
+    aspect-ratio:1/1; display:grid; place-items:center; font-weight:800; font-size:1.35rem;
+    text-transform:uppercase; border-radius:10px; background:var(--tile); border:1px solid rgba(255,255,255,.06);
+    transition:transform .1s ease;
+  }
+  .tile.filled{border-color:#8ab4f8}
+  .tile.correct{background:var(--correct); color:white; border-color:var(--correct)}
+  .tile.present{background:var(--present); color:white; border-color:var(--present)}
+  .tile.absent{background:var(--absent); color:white; border-color:var(--absent)}
+  .flip{animation:flip .6s ease forwards}
+  @keyframes flip{
+    0%{transform:rotateX(0)}
+    49%{transform:rotateX(90deg)}
+    50%{transform:rotateX(-90deg)}
+    100%{transform:rotateX(0)}
+  }
+  .kbd{display:grid; gap:8px; padding:16px}
+  .rowk{display:flex; justify-content:center; gap:8px}
+  .key{
+    background:#1f2937; color:var(--ink); border:1px solid rgba(255,255,255,.08);
+    min-width:36px; height:48px; border-radius:8px; display:flex; align-items:center; justify-content:center;
+    font-weight:700; cursor:pointer; user-select:none; padding:0 10px; transition:transform .05s ease,background .2s ease;
+  }
+  .key:hover{transform:translateY(-1px)}
+  .key.big{min-width:64px}
+  .key.correct{background:var(--correct); color:white; border-color:var(--correct)}
+  .key.present{background:var(--present); color:white; border-color:var(--present)}
+  .key.absent{background:var(--absent); color:white; border-color:var(--absent)}
+  .bar{display:flex; align-items:center; gap:10px; padding:8px 14px 16px; color:var(--muted); font-size:.95rem; flex-wrap:wrap}
+  .btn{
+    background:transparent; color:var(--ink); border:1px solid rgba(255,255,255,.18); padding:8px 12px; border-radius:10px;
+    cursor:pointer; font-weight:700;
+  }
+  .btn.primary{background:linear-gradient(90deg,#22d3ee,#60a5fa); color:#0b0c10; border:none}
+  .toast{position:fixed; top:18px; left:50%; transform:translateX(-50%); background:#111827; color:var(--ink);
+         padding:10px 14px; border:1px solid rgba(255,255,255,.12); border-radius:10px; opacity:0; pointer-events:none}
+  .toast.show{opacity:1; animation:fade .9s ease}
+  @keyframes fade{0%{opacity:0; transform:translate(-50%,-8px)} 15%,85%{opacity:1; transform:translate(-50%,0)} 100%{opacity:0; transform:translate(-50%,-8px)}}
+  details{padding:0 6px 12px}
+  summary{cursor:pointer; color:#93c5fd}
+  .list{display:flex; flex-wrap:wrap; gap:8px; margin-top:6px}
+  .chip{background:#0f172a; border:1px solid rgba(255,255,255,.08); padding:4px 8px; border-radius:999px; font-size:.8rem; color:#cbd5e1}
 </style>
 </head>
 <body>
+  <div class="app">
+    <header>
+      <div class="title">⚽ Football Wordle</div>
+      <div class="pill" id="modePill">Daily</div>
+    </header>
 
-<header>Roblox Script Snippet Manager - Reload to add a new snippit</header>
+    <div class="panel board" id="board" aria-live="polite"></div>
 
-<div id="tabBar">
-  <!-- tabs will be inserted here -->
-  <button id="addTabBtn">+ Add Tab</button>
-</div>
+    <div class="panel kbd" id="keyboard" aria-label="On-screen keyboard"></div>
 
-<div id="content">
-  <input type="text" id="snippetTitle" placeholder="Snippet Title" />
-  <input type="text" id="tagInput" placeholder="Add tag (e.g. vfx)" />
-  <button id="addTagBtn">Add Tag</button>
-  <div id="tagsContainer"></div>
-  <textarea id="snippetContent" placeholder="Paste your Roblox Lua script here..."></textarea>
-  <div id="buttonsRow">
-    <button id="saveBtn">Save Snippet</button>
-    <button id="copyBtn">Copy Snippet</button>
-    <button id="deleteBtn">Delete Snippet</button>
+    <div class="bar">
+      <button class="btn" id="toggleMode" title="Switch between Daily and Random">Toggle Daily/Random</button>
+      <button class="btn primary" id="restart">New Game</button>
+      <span id="status" role="status"></span>
+      <details>
+        <summary>Allowed answers (footballers)</summary>
+        <div class="list" id="chips"></div>
+      </details>
+    </div>
   </div>
-  <div id="snippetList"></div>
-</div>
 
-<footer>Made by <a href="https://www.roblox.com/users/4233358105/profile#!/about" target="_blank" rel="noopener noreferrer" style="color:#1db954; text-decoration:none;">Primalluxe</a></footer>
+  <div class="toast" id="toast">Not in list</div>
 
 <script>
-  const TAB_STORAGE_KEY = 'roblox_snippet_tabs';
-  let tabs = [];
-  let activeTabId = null;
-  let activeSnippetId = null;
-  const popularTags = ["VFX","LOCAL","SERVER","SCRIPT","ADMIN","DEV","TEST","UI","PLUGIN"];
+(() => {
+  // === 5-letter football names (first or last names; ASCII only) ===
+  const WORDS = [
+    "MESSI","SALAH","KANTE","KROOS","PIRLO","HENRY","ALABA","FODEN","PEDRI","MOUNT",
+    "PUYOL","XHAKA","KEANE","REINA","JAMES","NEUER","KLOSE","ALVES","TOURE","SILVA",
+    "MENDY","OBLAK","NAVAS","OSCAR","PAVON","PEREZ","VIDAL","RAMOS","JOVIC","FELIX",
+    "KROOS","PEDRO","HAKAN","ROBIN","KOHLI","ISNER" // last two are extras; feel free to remove/replace
+  ];
+  // Remove duplicates just in case
+  const UNIQUE = Array.from(new Set(WORDS.map(w => w.toUpperCase().replace(/[^A-Z]/g,'')))).filter(w => w.length===5);
 
-  function normalizeTag(input) {
-    const clean = input.toLowerCase().replace(/\s+/g, '');
-    for (const tag of popularTags) {
-      if (tag.toLowerCase() === clean) return tag;
-      const pattern = tag.toLowerCase().split('').join('.*');
-      if (new RegExp(pattern).test(clean)) return tag;
-    }
-    return input.charAt(0).toUpperCase() + input.slice(1);
-  }
+  // DOM
+  const boardEl = document.getElementById('board');
+  const keyboardEl = document.getElementById('keyboard');
+  const statusEl = document.getElementById('status');
+  const modePill = document.getElementById('modePill');
+  const toastEl = document.getElementById('toast');
+  const chipsEl = document.getElementById('chips');
 
-  function saveTabs() {
-    localStorage.setItem(TAB_STORAGE_KEY, JSON.stringify(tabs));
-  }
+  // Settings
+  const ROWS = 6, COLS = 5;
+  let dailyMode = true;
+  let target = pickWord();
+  let row = 0, col = 0, gameOver = false;
 
-  function loadTabs() {
-    const stored = localStorage.getItem(TAB_STORAGE_KEY);
-    if (stored) {
-      try {
-        tabs = JSON.parse(stored);
-      } catch {
-        tabs = [];
+  // Build chips list (answers preview)
+  chipsEl.innerHTML = '';
+  UNIQUE.forEach(w => {
+    const s = document.createElement('span');
+    s.className = 'chip';
+    s.textContent = w;
+    chipsEl.appendChild(s);
+  });
+
+  // Build board UI
+  function buildBoard(){
+    boardEl.innerHTML = '';
+    for(let r=0;r<ROWS;r++){
+      const rowEl = document.createElement('div'); rowEl.className='row';
+      for(let c=0;c<COLS;c++){
+        const tile = document.createElement('div');
+        tile.className = 'tile';
+        tile.setAttribute('data-r', r);
+        tile.setAttribute('data-c', c);
+        tile.setAttribute('aria-label', `Row ${r+1} Column ${c+1}`);
+        rowEl.appendChild(tile);
       }
+      boardEl.appendChild(rowEl);
     }
   }
+  buildBoard();
 
-  function genId() {
-    return Math.random().toString(36).slice(2, 10);
-  }
-
-  function renderTabs() {
-    const tabBar = document.getElementById('tabBar');
-    tabBar.querySelectorAll('.tab').forEach(el => el.remove());
-    for (const tab of tabs) {
-      const el = document.createElement('div');
-      el.className = 'tab';
-      if (tab.id === activeTabId) el.classList.add('active');
-      el.textContent = ''; 
-      const span = document.createElement('span');
-      span.textContent = tab.name || 'Untitled Tab';
-      el.appendChild(span);
-      const delBtn = document.createElement('span');
-      delBtn.textContent = ' ×';
-      delBtn.style.marginLeft = '6px';
-      delBtn.style.color = '#f55';
-      delBtn.style.cursor = 'pointer';
-      delBtn.onclick = (e) => {
-        e.stopPropagation();
-        if (confirm('Delete this tab?')) {
-          tabs = tabs.filter(t => t.id !== tab.id);
-          if (activeTabId === tab.id) {
-            activeTabId = tabs.length ? tabs[0].id : null;
-            activeSnippetId = null;
-          }
-          saveTabs();
-          renderTabs();
-          renderSnippetList();
-          clearSnippetEditor();
-        }
-      };
-      el.appendChild(delBtn);
-      el.title = tab.name || 'Untitled Tab';
-      el.onclick = () => {
-        if (activeTabId !== tab.id) {
-          activeTabId = tab.id;
-          activeSnippetId = null;
-          renderTabs();
-          renderSnippetList();
-          clearSnippetEditor();
-        }
-      };
-      tabBar.insertBefore(el, document.getElementById('addTabBtn'));
-    }
-  }
-
-  // Render snippet list (titles clickable)
-  function renderSnippetList() {
-    const list = document.getElementById('snippetList');
-    list.innerHTML = '';
-    if (!activeTabId) return;
-    const tab = tabs.find(t => t.id === activeTabId);
-    if (!tab || !tab.snippets) return;
-    for (const snippet of tab.snippets) {
-      const item = document.createElement('div');
-      item.className = 'snippetItem' + (snippet.id === activeSnippetId ? ' active' : '');
-      item.textContent = snippet.title;
-      item.title = snippet.title + (snippet.tags && snippet.tags.length ? ' | Tags: ' + snippet.tags.join(', ') : '');
-      item.onclick = () => {
-        activeSnippetId = snippet.id;
-        loadSnippetToEditor(snippet.id);
-        renderSnippetList();
-      };
-      list.appendChild(item);
-    }
-  }
-
-  function loadSnippetToEditor(snippetId) {
-    if (!activeTabId) return;
-    const tab = tabs.find(t => t.id === activeTabId);
-    if (!tab) return;
-    const snippet = tab.snippets.find(s => s.id === snippetId);
-    if (!snippet) return;
-    activeSnippetId = snippet.id;
-    document.getElementById('snippetTitle').value = snippet.title;
-    document.getElementById('snippetContent').value = snippet.content;
-    renderTags(snippet.tags);
-  }
-
-  function clearSnippetEditor() {
-    activeSnippetId = null;
-    document.getElementById('snippetTitle').value = '';
-    document.getElementById('snippetContent').value = '';
-    renderTags([]);
-  }
-
-  function renderTags(tags) {
-    const container = document.getElementById('tagsContainer');
-    container.innerHTML = '';
-    if (!tags) return;
-    for (const tag of tags) {
-      const box = document.createElement('div');
-      box.className = 'tagBox';
-      box.textContent = tag;
-      const removeBtn = document.createElement('span');
-      removeBtn.className = 'removeTag';
-      removeBtn.textContent = '×';
-      removeBtn.title = 'Remove tag';
-      removeBtn.onclick = (e) => {
-        e.stopPropagation();
-        removeTag(tag);
-      };
-      box.appendChild(removeBtn);
-      container.appendChild(box);
-    }
-  }
-
-  function getCurrentTags() {
-    const container = document.getElementById('tagsContainer');
-    return Array.from(container.children).map(tagBox => tagBox.textContent.slice(0, -1));
-  }
-
-  function addTag(tagInput) {
-    const normalized = normalizeTag(tagInput.trim());
-    if (!normalized) return;
-    let tags = getCurrentTags();
-    if (!tags.includes(normalized)) {
-      tags.push(normalized);
-      renderTags(tags);
-    }
-    document.getElementById('tagInput').value = '';
-  }
-
-  function removeTag(tag) {
-    let tags = getCurrentTags();
-    tags = tags.filter(t => t !== tag);
-    renderTags(tags);
-  }
-
-  function saveSnippet() {
-    const title = document.getElementById('snippetTitle').value.trim() || 'Untitled Snippet';
-    const content = document.getElementById('snippetContent').value;
-    const tags = getCurrentTags();
-    if (!activeTabId) {
-      alert('Please add and select a tab first.');
-      return;
-    }
-    let tab = tabs.find(t => t.id === activeTabId);
-    if (!tab.snippets) tab.snippets = [];
-    if (activeSnippetId) {
-      const snippet = tab.snippets.find(s => s.id === activeSnippetId);
-      if (snippet) {
-        snippet.title = title;
-        snippet.content = content;
-        snippet.tags = tags;
+  // Build keyboard
+  const layout = ["QWERTYUIOP","ASDFGHJKL","ENTERZXCVBNM⌫"];
+  function buildKeyboard(){
+    keyboardEl.innerHTML='';
+    layout.forEach((rowKeys,i)=>{
+      const rowk = document.createElement('div'); rowk.className='rowk';
+      for(const ch of rowKeys){
+        const key = document.createElement('button');
+        key.className = 'key';
+        if(ch==='E' && rowKeys.startsWith('ENTER')) continue; // handled as full word
+        if(ch==='⌫') key.classList.add('big');
+        key.textContent = (ch==='⌫' ? '⌫' : ch);
+        key.dataset.key = (ch==='⌫' ? 'BACKSPACE' : ch);
+        rowk.appendChild(key);
       }
+      // Add "ENTER" button explicitly at row 3 start
+      if(i===2){
+        const enter = document.createElement('button');
+        enter.className='key big';
+        enter.textContent='ENTER';
+        enter.dataset.key='ENTER';
+        rowk.prepend(enter);
+      }
+      keyboardEl.appendChild(rowk);
+    });
+  }
+  buildKeyboard();
+
+  // Keyboard events
+  keyboardEl.addEventListener('click', (e)=>{
+    const btn = e.target.closest('.key'); if(!btn) return;
+    onKey(btn.dataset.key);
+  });
+  window.addEventListener('keydown', (e)=>{
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    let k = e.key;
+    if(k==='Enter') k='ENTER';
+    if(k==='Backspace') k='BACKSPACE';
+    if(/^[a-z]$/i.test(k)) k = k.toUpperCase();
+    onKey(k);
+  });
+
+  // Controls
+  document.getElementById('restart').addEventListener('click', ()=>resetGame());
+  document.getElementById('toggleMode').addEventListener('click', ()=>{
+    dailyMode = !dailyMode; modePill.textContent = dailyMode?'Daily':'Random';
+    resetGame();
+  });
+
+  function resetGame(){
+    target = pickWord(); row=0; col=0; gameOver=false;
+    statusEl.textContent = '';
+    buildBoard(); paintKeyboard({});
+  }
+
+  function pickWord(){
+    if(dailyMode){
+      const d = new Date();
+      const key = (d.getUTCFullYear()*10000)+(d.getUTCMonth()+1)*100 + d.getUTCDate(); // yyyymmdd
+      return UNIQUE[key % UNIQUE.length];
     } else {
-      const newSnippet = {
-        id: genId(),
-        title,
-        content,
-        tags
-      };
-      tab.snippets.push(newSnippet);
-      activeSnippetId = newSnippet.id;
+      return UNIQUE[Math.floor(Math.random()*UNIQUE.length)];
     }
-    saveTabs();
-    renderSnippetList();
-    alert('Snippet saved!');
   }
 
-  function deleteSnippet() {
-    if (!activeTabId || !activeSnippetId) {
-      alert('No snippet selected to delete.');
-      return;
+  function onKey(k){
+    if(gameOver) return;
+    if(/^[A-Z]$/.test(k)){
+      if(col<COLS){
+        const tile = tileAt(row,col);
+        tile.textContent = k;
+        tile.classList.add('filled');
+        col++;
+      }
+    } else if(k==='BACKSPACE'){
+      if(col>0){
+        col--;
+        const tile = tileAt(row,col);
+        tile.textContent = '';
+        tile.classList.remove('filled');
+      }
+    } else if(k==='ENTER'){
+      submit();
     }
-    let tab = tabs.find(t => t.id === activeTabId);
-    if (!tab || !tab.snippets) return;
-    tab.snippets = tab.snippets.filter(s => s.id !== activeSnippetId);
-    activeSnippetId = null;
-    saveTabs();
-    renderSnippetList();
-    clearSnippetEditor();
   }
 
-  function copySnippet() {
-    const content = document.getElementById('snippetContent').value;
-    if (!content) return alert('No snippet content to copy.');
-    navigator.clipboard.writeText(content).then(() => {
-      alert('Snippet copied to clipboard!');
-    }).catch(() => {
-      alert('Failed to copy snippet.');
+  function tileAt(r,c){ return boardEl.children[r].children[c]; }
+
+  function submit(){
+    if(col<COLS){ return toast("Not enough letters"); }
+    const guess = getGuess();
+    if(!/^[A-Z]{5}$/.test(guess)) return toast("Letters only");
+    // Optional: require guess to be a footballer from list
+    if(!UNIQUE.includes(guess)) return toast("Not in football list");
+
+    // Score with duplicate-aware pass
+    const result = scoreGuess(guess, target);
+    animateRow(result, guess);
+
+    if(guess===target){
+      gameOver = true;
+      statusEl.textContent = `Goal! You guessed ${target} in ${row+1}/${ROWS}.`;
+    } else if(row===ROWS-1){
+      gameOver = true;
+      statusEl.textContent = `Full time! The word was ${target}.`;
+    } else {
+      row++; col=0;
+    }
+  }
+
+  function getGuess(){
+    let s=''; for(let c=0;c<COLS;c++){ s += tileAt(row,c).textContent || ''; }
+    return s.toUpperCase();
+  }
+
+  function scoreGuess(guess, answer){
+    const res = Array(COLS).fill('absent');
+    const counts = {};
+    for(const ch of answer) counts[ch]=(counts[ch]||0)+1;
+
+    // First pass: correct
+    for(let i=0;i<COLS;i++){
+      if(guess[i]===answer[i]){
+        res[i]='correct';
+        counts[guess[i]]--;
+      }
+    }
+    // Second pass: present
+    for(let i=0;i<COLS;i++){
+      if(res[i]==='correct') continue;
+      const ch = guess[i];
+      if(counts[ch]>0){
+        res[i]='present';
+        counts[ch]--;
+      }
+    }
+    return res;
+  }
+
+  function animateRow(result, guess){
+    const kbUpdates = {};
+    for(let i=0;i<COLS;i++){
+      const tile = tileAt(row,i);
+      setTimeout(()=>{
+        tile.classList.add('flip');
+        setTimeout(()=>{
+          tile.classList.remove('flip');
+          tile.classList.remove('filled');
+          tile.classList.add(result[i]);
+          kbUpdates[guess[i]] = better(kbUpdates[guess[i]], result[i]);
+          paintKeyboard(kbUpdates);
+        }, 300);
+      }, i*220);
+    }
+  }
+
+  function better(prev, now){
+    // precedence: correct > present > absent
+    const rank = {absent:0, present:1, correct:2};
+    if(!prev) return now;
+    return rank[now] > rank[prev] ? now : prev;
+  }
+
+  function paintKeyboard(extra){
+    // apply known states + extra updates
+    const states = {};
+    document.querySelectorAll('.key').forEach(k=>{
+      k.classList.remove('correct','present','absent');
+    });
+    // Collect from board
+    for(let r=0;r<=row;r++){
+      const isCurrent = (r===row);
+      for(let c=0;c<COLS;c++){
+        const t = tileAt(r,c);
+        const ch = t.textContent;
+        if(!ch) continue;
+        const cls = t.classList.contains('correct')?'correct':
+                    t.classList.contains('present')?'present':
+                    t.classList.contains('absent')?'absent':null;
+        if(cls) states[ch]=better(states[ch], cls);
+        if(isCurrent && !cls) states[ch]=better(states[ch], 'filled');
+      }
+    }
+    // Merge extra
+    for(const k in extra){ states[k]=better(states[k], extra[k]); }
+    // Paint
+    document.querySelectorAll('.key').forEach(k=>{
+      const ch = k.dataset.key;
+      if(!/^[A-Z]$/.test(ch)) return;
+      const s = states[ch];
+      if(s==='correct'||s==='present'||s==='absent') k.classList.add(s);
     });
   }
 
-  function addTab() {
-    let tabName = prompt('Enter new tab name:', 'New Tab');
-    if (!tabName) return;
-    tabName = tabName.trim();
-    if (tabName.length === 0) return alert('Tab name cannot be empty.');
-    // Check for duplicate (case insensitive)
-    if (tabs.some(t => t.name.toLowerCase() === tabName.toLowerCase())) {
-      return alert('A tab with that name already exists.');
-    }
-    tabs.push({ id: genId(), name: tabName, snippets: [] });
-    activeTabId = tabs[tabs.length - 1].id;
-    activeSnippetId = null;
-    saveTabs();
-    renderTabs();
-    renderSnippetList();
-    clearSnippetEditor();
+  function toast(msg){
+    toastEl.textContent = msg;
+    toastEl.classList.remove('show');
+    // Force reflow to restart animation
+    void toastEl.offsetWidth;
+    toastEl.classList.add('show');
   }
 
-  function init() {
-    loadTabs();
-    if (tabs.length === 0) {
-      tabs.push({ id: genId(), name: 'Default', snippets: [] });
-    }
-    activeTabId = tabs[0].id;
-    renderTabs();
-    renderSnippetList();
-    clearSnippetEditor();
-
-    document.getElementById('addTabBtn').onclick = addTab;
-    document.getElementById('addTagBtn').onclick = () => {
-      const tagInput = document.getElementById('tagInput').value;
-      if (tagInput.trim() !== '') {
-        addTag(tagInput);
-      }
-    };
-    document.getElementById('saveBtn').onclick = saveSnippet;
-    document.getElementById('deleteBtn').onclick = () => {
-      if (confirm('Are you sure you want to delete this snippet?')) deleteSnippet();
-    };
-    document.getElementById('copyBtn').onclick = copySnippet;
-
-    document.getElementById('tagInput').addEventListener('keydown', e => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        const tagInput = document.getElementById('tagInput').value;
-        if (tagInput.trim() !== '') {
-          addTag(tagInput);
-        }
-      }
-    });
-  }
-
-  window.onload = init;
+  // Initialize pill
+  modePill.textContent = dailyMode ? 'Daily' : 'Random';
+})();
 </script>
-
 </body>
 </html>
