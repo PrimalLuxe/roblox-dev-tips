@@ -1,0 +1,135 @@
+/mnt/data/shake_vending_orig/shake-vending-game-FINAL/src/ServerScriptService/Services/AssetLoadService.lua /mnt/data/shake_vending_work/shake-vending-game-FINAL/src/ServerScriptService/Services/AssetLoadService.lua
+--- /mnt/data/shake_vending_orig/shake-vending-game-FINAL/src/ServerScriptService/Services/AssetLoadService.lua	2026-08-26 03:20:17.000000000 +0000
++++ /mnt/data/shake_vending_work/shake-vending-game-FINAL/src/ServerScriptService/Services/AssetLoadService.lua	2026-08-26 15:56:45.815419598 +0000
+@@ -17,6 +17,12 @@
+         elseif d:IsA("Sound") then
+             -- Free models often carry dozens of unrelated audio objects. Our own sound layer is deterministic.
+             d:Destroy()
++        elseif d:IsA("BodyMover") or d:IsA("JointInstance") then
++            -- Donor physics/joints can move anchored kitbash pieces or create hidden assembly dependencies.
++            d:Destroy()
++        elseif d:IsA("Constraint") then
++            -- Production donor geometry is anchored and static; imported constraints are never trusted implicitly.
++            d:Destroy()
+         elseif d:IsA("BasePart") then
+             d.Anchored = true
+             d.CanCollide = false
+@@ -116,30 +122,21 @@
+ 
+ function AssetLoadService:Init()
+     local folder = self:GetFolder()
+-    -- AllowInsertFreeAssets is configured in Experience Settings and is not safely readable
+-    -- from ordinary experience code. Do not preflight the protected property: attempt the
+-    -- sandboxed LoadAssetAsync calls and report an actionable setup error only if they fail.
+     ReplicatedStorage:SetAttribute("ThirdPartyAssetsAllowed", nil)
+     ReplicatedStorage:SetAttribute("CreatorAssetsReady", false)
+     ReplicatedStorage:SetAttribute("CreatorAssetsError", nil)
+ 
+-    -- Only block startup on assets that materially define the first playable screen. Extra
+-    -- donor variants load after boot, so the player is not staring at a loading screen while
+-    -- 30+ Creator Store requests finish.
+-    local critical = {
+-        "VendingMachineDetailed","VendingMachine","VendingMachineStudded","VendingMachineModern",
+-        "HubShop","LowPolyShop","CollectionShop","GardenPlot","Podium","SellATM","SimulatorUI",
+-        "SodaCan","WaterBottle","PotatoChips","Chocolate","StoreItemsPack","RobotToy",
+-    }
+-    local criticalSet={}
+-    local criticalQueue={}
+-    for _,key in ipairs(critical) do
+-        local def=Manifest[key]
+-        if def and def.AutoLoad and not criticalSet[key] then
+-            criticalSet[key]=true;table.insert(criticalQueue,key)
++    local queues = {Critical={}, Warm={}, Background={}, Lazy={}}
++    for key, def in pairs(Manifest) do
++        if def.AutoLoad and not folder:FindFirstChild(key) then
++            local phase = queues[def.LoadPhase] and def.LoadPhase or "Background"
++            table.insert(queues[phase], key)
+         end
+     end
+-    local criticalFinished=boundedLoad(self,criticalQueue,6,math.min(Config.AssetLoadTimeoutSeconds,22))
++    for _, queue in pairs(queues) do table.sort(queue) end
++
++    -- The first playable screen waits only on the smallest curated critical set.
++    local criticalFinished = boundedLoad(self, queues.Critical, 6, math.min(Config.AssetLoadTimeoutSeconds, 20))
+ 
+     local function hasAny(...)
+         for _,key in ipairs({...}) do if folder:FindFirstChild(key) then return true end end
+@@ -160,28 +157,30 @@
+     ReplicatedStorage:SetAttribute("CreatorAssetsReady",ready)
+     ReplicatedStorage:SetAttribute("ThirdPartyAssetsAllowed", #folder:GetChildren()>0 and true or false)
+     if ready then
+-        print(string.format("[ShakeVM] Creator Store core pack ready: %d sanitized assets (%d/%d critical attempts finished)",#folder:GetChildren(),criticalFinished,#criticalQueue))
++        print(string.format("[ShakeVM] Critical Creator Store pack ready: %d sanitized assets (%d/%d attempts finished)",#folder:GetChildren(),criticalFinished,#queues.Critical))
+     else
+         local message="Creator Store visuals could not fully load: "..table.concat(missing,", ")..". In Studio enable Game Settings > Security > Allow Loading Third Party Assets, then restart Play."
+-        if criticalFinished<#criticalQueue then message..=" Core asset loading also hit the startup timeout." end
++        if criticalFinished<#queues.Critical then message..=" Core asset loading also hit the startup timeout." end
+         ReplicatedStorage:SetAttribute("CreatorAssetsError",message)
+         warn("[ShakeVM]",message)
+         return false
+     end
+ 
+-    -- Fill in alternate cans/bottles/toys/decor in the background. Every visual request already
+-    -- has a Creator Store family fallback, so these are quality upgrades rather than blockers.
+-    local optional={}
+-    for key,def in pairs(Manifest) do
+-        if def.AutoLoad and not criticalSet[key] and not folder:FindFirstChild(key) then table.insert(optional,key) end
++    -- Warm assets improve the first hub shortly after reveal; background donors fill later machines.
++    if #queues.Warm>0 then
++        task.spawn(function()
++            local done=boundedLoad(self,queues.Warm,4,math.min(Config.AssetLoadTimeoutSeconds,30))
++            print(string.format("[ShakeVM] Warm Creator Store donors: %d/%d attempts finished",done,#queues.Warm))
++        end)
+     end
+-    table.sort(optional)
+-    if #optional>0 then
++    if #queues.Background>0 then
+         task.spawn(function()
+-            local done=boundedLoad(self,optional,4,Config.AssetLoadTimeoutSeconds)
+-            print(string.format("[ShakeVM] Optional Creator Store donors: %d/%d attempts finished",done,#optional))
++            task.wait(2)
++            local done=boundedLoad(self,queues.Background,3,Config.AssetLoadTimeoutSeconds)
++            print(string.format("[ShakeVM] Background Creator Store donors: %d/%d attempts finished",done,#queues.Background))
+         end)
+     end
++    -- Lazy entries intentionally remain unloaded until an explicit LoadOne request.
+     return true
+ end
+ 
+diff -ruN '--exclude=rojo.exe' /mnt/data/shake_vending_orig/shake-vending-game-FINAL/src/ServerScriptService/Services/DataService.lua /mnt/data/shake_vending_work/shake-vending-game-FINAL/src/ServerScriptService/Services/DataService.lua
+--- /mnt/data/shake_vending_orig/shake-vending-game-FINAL/src/ServerScriptService/Services/DataService.lua	2026-08-26 02:48:20.000000000 +0000
++++ /mnt/data/shake_vending_work/shake-vending-game-FINAL/src/ServerScriptService/Services/DataService.lua	2026-08-26 15:56:45.814616762 +0000
+@@ -28,6 +28,18 @@
+     return "u:" .. tostring(userId)
+ end
+ 
++
++local function applyPlayerSettingsAttributes(player, profile)
++    local settings = profile and profile.Settings or {}
++    player:SetAttribute("ShakeVM_IntroSeen", settings.IntroSeen == true)
++    player:SetAttribute("ShakeVM_ReducedEffects", settings.ReducedEffects == true)
++    player:SetAttribute("ShakeVM_ReducedScreenShake", settings.ReducedScreenShake == true)
++    player:SetAttribute("ShakeVM_SkipLongReveals", settings.SkipLongReveals == true)
++    player:SetAttribute("ShakeVM_MusicEnabled", settings.MusicEnabled ~= false)
++    player:SetAttribute("ShakeVM_SFXEnabled", settings.SFXEnabled ~= false)
++    player:SetAttribute("ShakeVM_EffectQuality", settings.EffectQuality or "High")
++end
++
+ local function cleanProfile(profile)
+     -- Roblox serializes plain tables; never put Instances/CFrames here.
+     profile.LastSeenAt = os.time()
+@@ -49,6 +61,7 @@
+         local loaded = Util.DeepCopy(Template)
+         loaded.CreatedAt = os.time(); loaded.LastSeenAt = os.time()
+         self.Profiles[player.UserId] = loaded; self.LoadedAt[player.UserId] = os.clock()
++        applyPlayerSettingsAttributes(player, loaded)
+         return true
+     end
+     local loaded
+@@ -69,6 +82,7 @@
+     end
+     self.Profiles[player.UserId] = loaded
+     self.LoadedAt[player.UserId] = os.clock()
++    applyPlayerSettingsAttributes(player, loaded)
+     task.spawn(function()
+         self:Reconcil
