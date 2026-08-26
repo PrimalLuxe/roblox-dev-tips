@@ -13,6 +13,7 @@ client=read('StarterPlayer/StarterPlayerScripts/ClientBootstrap.client.lua')
 manifest=read('ReplicatedStorage/Shared/AssetManifest.lua')
 theme=read('ReplicatedStorage/Shared/UITheme.lua')
 drop=read('StarterPlayer/StarterPlayerScripts/Controllers/DropVisualController.lua')
+world=read('ServerScriptService/Services/WorldBuilder.lua')
 for marker in ['OlympusKitbash','DisplayGlass','Product_','MachineScreen','CardReader','DispenseTray','AccessPanel','Vent','Marquee','ArtDirectionVersion']:
     assert marker in art, f'machine art marker missing: {marker}'
 for machine in ['CornerStore','SugarRush','Energy','ToyCapsule','Luxury','Unknown']:
@@ -22,16 +23,18 @@ for donor in ['ArcadeCabinet','StreetBench','StreetLamp','TrashCan','CornerStore
 for marker in ['CornerStoreIdentity','SugarRushIdentity','EnergyIdentity','ToyCapsuleIdentity','LuxuryIdentity','ServiceIdentity','AuthoredDistrictDetails']:
     assert marker in district or marker in polish, f'authored district identity missing: {marker}'
 assert 'MachineArtDirector.Apply' in polish and 'DistrictArtDirector:Apply' in polish and 'fillFacades' in polish
+assert 'MachineArtDirector.Apply(model,shell,machineId)' in world, 'machine kitbash must participate in primary world construction'
 assert 'WorldPolishService:Init()' in boot
-for marker in ['SHAKING','WAIT...','COLLECT!','Product_','PlayMachine("Rattle"','PlayMachine("Clunk"','ToObjectSpace']:
+for marker in ['SHAKE\\nLOCKED','SHAKING','VENDING...','COLLECT!','Product_','PlayMachine("Rattle"','PlayMachine("Clunk"','ToObjectSpace','easeOutBack','overdriveStrength','DispenseTray','xpcall']:
     assert marker in motion, f'mechanical interaction marker missing: {marker}'
 assert 'MachineInteraction:Init(events,Audio)' in client
 for marker in ['RetailNavRail','VENDING MENU','COINS','CATALOG','RetailHeaderStrip','NEXT OBJECTIVE']:
     assert marker in hud, f'HUD retail-art marker missing: {marker}'
 assert 'HudArt:Apply(UI)' in client, 'HudArtDirector is not initialized'
+assert 'CollectionArt:Apply(UI)' in client, 'CollectionArtDirector is not initialized'
 assert 'partCount>18' in factory and '"pack"' in factory and 'bestScore<5' in factory, 'pack extraction can regress to whole-pack collectibles'
 assert 'SimulatorUI' not in theme, 'UI theme must not inherit donor UI at runtime'
 compact=theme.replace(' ','')
 assert ('248,244,232' in compact or '255,248,226' in compact), 'authored cream product-card palette missing'
 assert ('addMutationLanguage' in drop and 'VFX.GetMutation' in drop) or 'RevealVFX' in drop, 'mutation-specific reveal language missing'
-print('PASS: authored machine kitbash, layered interaction, distinct Downtown districts, HUD hierarchy, safe donor extraction, UI identity, and reveal-language guardrails present.')
+print('PASS: authored machine kitbash, staged physical interaction, distinct Downtown districts, HUD/collection hierarchy, safe donor extraction, UI identity, and reveal-language guardrails present.')
