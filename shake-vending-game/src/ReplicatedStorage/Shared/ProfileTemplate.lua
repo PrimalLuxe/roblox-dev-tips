@@ -1,5 +1,5 @@
 return {
-    Version = 3,
+    Version = 4,
     Coins = 125,
     CollectionScore = 0,
     StyleShards = 0,
@@ -13,7 +13,6 @@ return {
     Inventory = {},
     UnlockedMachines = { CornerStore = true },
 
-    -- Collection tracks every base+mutation discovered. BaseCollection drives the 60-item catalog.
     Collection = {},
     BaseCollection = {},
     CosmeticUnlocks = {},
@@ -45,9 +44,7 @@ return {
         TradesCompleted = 0,
         TotalSold = 0,
     },
-    TradeSettings = {
-        Enabled = true,
-    },
+    TradeSettings = { Enabled = true },
     Settings = {
         EffectQuality = "High",
         ReducedEffects = false,
@@ -56,6 +53,9 @@ return {
         MusicEnabled = true,
         SFXEnabled = true,
         IntroSeen = false,
+        TutorialComplete = false,
+        AutoLockLegendary = true,
+        KeepOneEach = true,
     },
     PendingTrades = {},
     CompletedTrades = {},
