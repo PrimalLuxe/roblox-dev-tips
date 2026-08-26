@@ -16,6 +16,10 @@ return {
     Podium = { Id=4180574986, LoadPhase="Critical", Role="Podium", AutoLoad=true, Note="Free statue pedestal" },
     SellATM = { Id=3893560084, LoadPhase="Critical", Role="World", AutoLoad=true, Note="Free Basic ATM" },
     SimulatorUI = { Id=6177977821, LoadPhase="Critical", Role="UI", AutoLoad=true, Note="Free Simulator UI style donor; scripts stripped" },
+    ArcadeCabinet = { Id=15940632283, LoadPhase="Warm", Role="World", AutoLoad=true, Note="Free scriptless arcade environment donor" },
+    StreetBench = { Id=342263157, LoadPhase="Warm", Role="World", AutoLoad=true, Note="Free rated bench donor for Downtown street furniture" },
+    StreetLamp = { Id=5131224078, LoadPhase="Warm", Role="World", AutoLoad=true, Note="Free compact street-light donor" },
+    TrashCan = { Id=4860243220, LoadPhase="Warm", Role="World", AutoLoad=true, Note="Free rated compact trash-can donor" },
 
     -- Item model donors. Multiple catalog entries deliberately share a strong base asset,
     -- then get recolored/restyled/mutated so the whole collection stays visually coherent.
