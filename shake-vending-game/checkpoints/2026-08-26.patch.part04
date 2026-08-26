@@ -1,0 +1,120 @@
+ePendingTrades(player.UserId)
+     end)
+diff -ruN '--exclude=rojo.exe' /mnt/data/shake_vending_orig/shake-vending-game-FINAL/src/ServerScriptService/Services/SettingsService.lua /mnt/data/shake_vending_work/shake-vending-game-FINAL/src/ServerScriptService/Services/SettingsService.lua
+--- /mnt/data/shake_vending_orig/shake-vending-game-FINAL/src/ServerScriptService/Services/SettingsService.lua	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/shake_vending_work/shake-vending-game-FINAL/src/ServerScriptService/Services/SettingsService.lua	2026-08-26 15:57:19.743433854 +0000
+@@ -0,0 +1,54 @@
++local SettingsService = {}
++
++local EFFECT_QUALITY = {Low=true, Medium=true, High=true}
++
++local function setPlayerAttribute(player, key, value)
++    player:SetAttribute("ShakeVM_" .. key, value)
++end
++
++function SettingsService:Init(RemoteService, DataService, TradingService)
++    self.RemoteService = RemoteService
++    self.DataService = DataService
++    self.TradingService = TradingService
++
++    RemoteService.Events.SettingsAction.OnServerEvent:Connect(function(player, action, value)
++        if type(action) ~= "string" then return end
++        local profile = DataService:GetProfile(player)
++        if not profile then return end
++        profile.Settings = profile.Settings or {}
++
++        if action == "trade_enabled" and type(value) == "boolean" then
++            profile.TradeSettings.Enabled = value
++            if not value then TradingService:CancelForUser(player.UserId, "Trading disabled") end
++            RemoteService.Events.Toast:FireClient(player, {Text=value and "Trade requests enabled" or "Trade requests disabled", Kind="Info"})
++            return
++        end
++
++        if action == "effect_quality" and EFFECT_QUALITY[value] then
++            profile.Settings.EffectQuality = value
++            setPlayerAttribute(player, "EffectQuality", value)
++        elseif action == "reduced_effects" and type(value) == "boolean" then
++            profile.Settings.ReducedEffects = value
++            setPlayerAttribute(player, "ReducedEffects", value)
++        elseif action == "reduced_screen_shake" and type(value) == "boolean" then
++            profile.Settings.ReducedScreenShake = value
++            setPlayerAttribute(player, "ReducedScreenShake", value)
++        elseif action == "skip_long_reveals" and type(value) == "boolean" then
++            profile.Settings.SkipLongReveals = value
++            setPlayerAttribute(player, "SkipLongReveals", value)
++        elseif action == "music_enabled" and type(value) == "boolean" then
++            profile.Settings.MusicEnabled = value
++            setPlayerAttribute(player, "MusicEnabled", value)
++        elseif action == "sfx_enabled" and type(value) == "boolean" then
++            profile.Settings.SFXEnabled = value
++            setPlayerAttribute(player, "SFXEnabled", value)
++        elseif action == "intro_seen" and value == true then
++            profile.Settings.IntroSeen = true
++            setPlayerAttribute(player, "IntroSeen", true)
++        else
++            return
++        end
++    end)
++end
++
++return SettingsService
+diff -ruN '--exclude=rojo.exe' /mnt/data/shake_vending_orig/shake-vending-game-FINAL/src/ServerScriptService/Services/TradingService.lua /mnt/data/shake_vending_work/shake-vending-game-FINAL/src/ServerScriptService/Services/TradingService.lua
+--- /mnt/data/shake_vending_orig/shake-vending-game-FINAL/src/ServerScriptService/Services/TradingService.lua	2026-08-26 03:05:07.000000000 +0000
++++ /mnt/data/shake_vending_work/shake-vending-game-FINAL/src/ServerScriptService/Services/TradingService.lua	2026-08-26 15:56:45.814954534 +0000
+@@ -200,18 +200,17 @@
+     end
+ end
+ 
++
++function TradingService:CancelForUser(userId, reason)
++    local session = self:GetSessionFor(userId)
++    if session then self:Cancel(session, reason or "Cancelled") end
++    self.PendingRequests[userId] = nil
++end
++
+ function TradingService:Init(RemoteService,DataService,CosmeticService,ShowcaseService)
+     self.RemoteService=RemoteService; self.DataService=DataService; self.CosmeticService=CosmeticService; self.ShowcaseService=ShowcaseService
+     RemoteService.Events.RequestTrade.OnServerEvent:Connect(function(p,target) self:Request(p,target) end)
+     RemoteService.Events.TradeAction.OnServerEvent:Connect(function(p,action,data) if type(action)=="string" then self:Action(p,action,data) end end)
+-    RemoteService.Events.SettingsAction.OnServerEvent:Connect(function(p,action,value)
+-        local profile=self.DataService:GetProfile(p); if not profile or type(action)~="string" then return end
+-        if action=="trade_enabled" and type(value)=="boolean" then
+-            profile.TradeSettings.Enabled=value
+-            if not value then local s=self:GetSessionFor(p.UserId); if s then self:Cancel(s,"Trading disabled") end end
+-            self.RemoteService.Events.Toast:FireClient(p,{Text=value and "Trade requests enabled" or "Trade requests disabled",Kind="Info"})
+-        end
+-    end)
+     Players.PlayerRemoving:Connect(function(p) local s=self:GetSessionFor(p.UserId); if s then self:Cancel(s,"Player left") end; self.PendingRequests[p.UserId]=nil end)
+ end
+ 
+diff -ruN '--exclude=rojo.exe' /mnt/data/shake_vending_orig/shake-vending-game-FINAL/src/StarterPlayer/StarterPlayerScripts/ClientBootstrap.client.lua /mnt/data/shake_vending_work/shake-vending-game-FINAL/src/StarterPlayer/StarterPlayerScripts/ClientBootstrap.client.lua
+--- /mnt/data/shake_vending_orig/shake-vending-game-FINAL/src/StarterPlayer/StarterPlayerScripts/ClientBootstrap.client.lua	2026-08-26 02:50:26.000000000 +0000
++++ /mnt/data/shake_vending_work/shake-vending-game-FINAL/src/StarterPlayer/StarterPlayerScripts/ClientBootstrap.client.lua	2026-08-26 16:00:12.338843408 +0000
+@@ -8,7 +8,8 @@
+ local UI=require(Controllers.UIController);local Drop=require(Controllers.DropVisualController);local Machine=require(Controllers.MachineController);local Trade=require(Controllers.TradeController);local Inspect=require(Controllers.InspectController)
+ 
+ UI:Build(events,functions)
+-Drop:Init(events);UI.OnSettingsChanged=function(q,skip)Drop:SetSettings(q,skip)end
++Drop:Init(events);UI.OnSettingsChanged=function(settings)Drop:SetSettings(settings)end
++if UI.Snapshot and UI.Snapshot.Profile then UI:ApplyProfileSettings(UI.Snapshot.Profile) end
+ Machine:Init(events);UI.OnSnapshotChanged=function(snapshot)Machine:SetSnapshot(snapshot)end;Machine:SetSnapshot(UI.Snapshot)
+ Trade:Init(events,UI);Inspect:Init(functions,UI,Drop)
+ print("[ShakeVM] Client ready — Creator asset overhaul")
+diff -ruN '--exclude=rojo.exe' /mnt/data/shake_vending_orig/shake-vending-game-FINAL/src/StarterPlayer/StarterPlayerScripts/Controllers/DropVisualController.lua /mnt/data/shake_vending_work/shake-vending-game-FINAL/src/StarterPlayer/StarterPlayerScripts/Controllers/DropVisualController.lua
+--- /mnt/data/shake_vending_orig/shake-vending-game-FINAL/src/StarterPlayer/StarterPlayerScripts/Controllers/DropVisualController.lua	2026-08-26 03:19:46.000000000 +0000
++++ /mnt/data/shake_vending_work/shake-vending-game-FINAL/src/StarterPlayer/StarterPlayerScripts/Controllers/DropVisualController.lua	2026-08-26 16:00:12.338765720 +0000
+@@ -16,10 +16,10 @@
+ local Factory=require(ReplicatedStorage.Shared.ItemVisualFactory)
+ local Util=require(ReplicatedStorage.Shared.Util)
+ 
+-local DropVisualController={Active=nil,EffectQuality="High",SkipLong=false,PointerPosition=nil}
++local DropVisualController={Active=nil,EffectQuality="High",SkipLong=false,ReducedEffects=false,ReducedScreenShake=false,SFXEnabled=true,PointerPosition=nil}
+ 
+ local function playSound(soundId,volume,pitch)
+-    if not soundId or soundId=="" then return end
++    if not DropVisualController.SFXEnabled or not soundId or soundId=="" then return end
+     local s=Instance.new("Sound"); s.SoundId=soundId; s.Volume=volume or 0.45; s.PlaybackSpeed=pitch or 1; s.Parent=camera; s:Play()
+     game:GetService("Debris"):AddItem(s,5)
+ end
+@@ -53,7 +53,7 @@
+ end
