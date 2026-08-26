@@ -7,7 +7,7 @@
 - Folder: `shake-vending-game`
 - Source of truth: latest uploaded **Shake a Vending Machine — Front-Page Production Overhaul Master Prompt**.
 
-This pass inspected the real branch before editing. Starting HEAD was `1f502619d55c063e099a50555e1140170cc93fa8` (`Finalize handmade Downtown and pixel presentation rebuild`), which was newer than the previous audio checkpoint.
+This pass inspected the persisted branch before editing. Starting HEAD was `fed40be47e78fee1c5f5dc93c420b772c3846d02` (`Checkpoint responsive accessibility and audit reconciliation pass`).
 
 ## Stable production systems already persisted
 
@@ -27,61 +27,46 @@ This pass inspected the real branch before editing. Starting HEAD was `1f502619d
 - Staged physical vending interaction with keypad acknowledgement, constrained rattle, product inertia, suspense, CLUNK and tray kick.
 - Distinct mutation/reveal VFX source language with quality/distance bounds.
 - Categorized audio architecture with group mixing, positional cues, spam control and rarity ducking.
+- Responsive safe-area layout, compact bottom navigation, gamepad focus recovery and reduced-motion integration.
 
-## Work completed in this pass — mobile, gamepad and accessibility
+## Work completed in this pass — collection performance architecture
 
-### `AccessibilityController.lua`
+### Virtualized collection previews
 
-Added a dedicated controller that runs after `HudArtDirector` and `CollectionArtDirector` so responsive behavior adapts the finished authored UI rather than competing with it.
+`CollectionArtDirector.lua` previously destroyed and recreated the complete visible-result set on every render, including one `ViewportFrame`, `WorldModel`, camera and cloned donor model for every discovered inventory/catalog item. That architecture scaled poorly for the master prompt's 100+ inventory requirement.
+
+The collection grid now uses lightweight `VirtualSlot` layout frames for the complete result set while mounting heavy cards only inside the currently visible row window plus one overscan row.
 
 Implemented:
 
-- `CoreUISafeInsets` and device-safe clipping for interactive UI;
-- responsive layout based on the actual camera viewport;
-- compact breakpoint at narrow/short viewports;
-- two-row compact resource HUD;
-- bottom-dock navigation replacing the desktop left rail on compact screens;
-- progression objective relocation above the compact dock;
-- modal scaling down to 0.28 for narrow screens, fixing the previous hard 0.52 floor that could leave the 920 px collection surface wider than a phone viewport;
-- captured desktop baselines and exact restoration when resizing back up, avoiding cumulative layout drift;
-- explicit button/text-box selectability and deterministic selection order;
-- high-contrast custom `PlayerGui.SelectionImageObject` for controller focus;
-- controller focus recovery when gamepad input becomes active;
-- viewport/current-camera change listeners.
+- visible-window calculation from `CanvasPosition`, `AbsoluteSize`, cell size and padding;
+- one-row overscan to prevent pop-in during normal scrolling;
+- automatic unmount/destruction of offscreen heavy cards and their nested 3D preview resources;
+- one deferred/coalesced mount refresh for rapid scroll events instead of rebuilding repeatedly inside the event burst;
+- `CollectionRenderGeneration` protection so stale deferred work cannot remount a previous search/sort/profile snapshot;
+- responsive column-count recalculation when the collection viewport size changes;
+- `AutomaticCanvasSize` retention for scrolling behavior;
+- existing authored rarity/card interaction, hunt behavior and item inspection retained inside the mounted cards.
 
-### Platform reduced-motion support
-
-`ClientBootstrap.client.lua` now reads `GuiService.ReducedMotionEnabled`. When enabled, the effective local presentation settings force `ReducedEffects` and `ReducedScreenShake` before reveal/audio presentation controllers consume them. The player profile is not overwritten by this platform preference.
+This reduces live preview-model count from O(total matching inventory) to O(visible cards + overscan) while keeping lightweight slots for deterministic `UIGridLayout` ordering.
 
 ### Regression tooling
 
-Added `tools/mobile_accessibility_check.py` and wired it into the production Actions workflow.
+Added `tools/performance_check.py` and wired it into `.github/workflows/shake-vending-production-checks.yml`.
 
-The new gate covers safe-area configuration, compact navigation, progression-goal relocation, modal downscaling, baseline restoration, selection image/order, gamepad focus, Button B support and platform reduced-motion wiring.
+The gate verifies persisted virtualization state, lightweight slots, scroll-driven mounting, overscan, offscreen release, coalescing, viewport-resize refresh and stale-render protection. It also preserves the explicit boundary that static checks are not measured Studio/device profiling.
 
-Added `ACCESSIBILITY_AUDIT.md` with the source architecture and explicit Studio/device verification boundary.
+Updated `PERFORMANCE_AUDIT.md` to document the new architecture and the remaining 100+/250+/max-capacity MicroProfiler checks.
 
-## Existing audit drift found and corrected
+## CI status for this pass
 
-The newer handmade/pixel presentation rebuild had changed the world architecture after several source audits were written. CI therefore contained stale assertions for deleted names such as `MainRoad`, `WestCrossStreet`, `ShowcasePromenade` and `MachineArtDirector.Build`, and incorrectly rejected all curated donor usage even though the current architecture intentionally sanitizes selected donors and layers authored geometry on top.
+The source implementation commit is `341a89b0a542955cb101d0d756cdfb48393c55dc`. Documentation followed on `855dec6986564d65aaf6b4b50ce3bd1ad2de77d9` and this checkpoint commit.
 
-This pass did not disable those gates. It reconciled them to the actual persisted architecture:
+Production workflow run #41 was triggered by the implementation commit. Final release status for this run must be based on the newest exact-head workflow after documentation/checkpoint changes complete; do not reuse the previous run #40 as proof for these changes.
 
-- `tools/static_check.py` now guards current `BUILDING_STYLES`, roads/plaza/storefront/directory/global-board composition, district placement loops, current machine-screen integration and accessibility bootstrap wiring.
-- `tools/presentation_check.py` now verifies authored district composition, donor sanitation, authored vending fascia, physical showcase, pixel UI/loading and runtime art/accessibility wiring.
-- `tools/visual_quality_check.py` now checks the same current world language plus staged vending interaction, physical machine status, pixel HUD/catalog and responsive accessibility markers.
+## Current structural counts
 
-The static audit still preserves data integrity, forbidden runtime-loader checks, remote-name validation, progression authority, autosave safety and Lua bracket checks.
-
-## CI progression during this pass
-
-- Run #32 exposed stale `static_check.py` world/machine markers.
-- After updating static checks, run #35 passed static and exposed stale `presentation_check.py` assumptions.
-- After updating presentation checks, run #36 passed static + presentation and exposed stale `visual_quality_check.py` assumptions.
-- `visual_quality_check.py` has now been reconciled to current source.
-- The final documentation changes trigger another exact-head workflow run; release status must be based on that final result, not an older green run.
-
-The latest observed structural counts from CI are:
+Latest previously-green structural CI verified:
 
 ```text
 60 launch items
@@ -91,7 +76,7 @@ The latest observed structural counts from CI are:
 54 Lua source files
 ```
 
-The reduced manifest count reflects the later item/presentation rebuild and must not be confused with the older 49-asset checkpoint.
+This pass adds one Python regression tool and does not change launch item or manifest counts.
 
 ## Remaining release blockers
 
@@ -103,7 +88,7 @@ The project is **not release-certified**. Source gates cannot replace the follow
 4. Audio permission/listening pass: verify persisted IDs, replace provisional reused sounds with individually curated permitted free Creator Store audio, add/tune appropriate background music, and test mix on phone/headphones/desktop.
 5. Studio emulator and physical-device checks for phone/tablet safe areas, touch targets, virtual-keyboard overlap, text truncation and modal ergonomics.
 6. Full controller traversal through every menu, confirmation, trade state, collection grid and onboarding state to catch focus traps.
-7. Low-end performance profiling with large inventories, multiple players, showcases and high-tier VFX/auras.
+7. Low-end performance profiling, now specifically including rapid Collection scrolling at 100+, 250+ and maximum-capacity inventories and verification that live ViewportFrame/WorldModel counts remain bounded while offscreen cards are released.
 8. Published DataStore/MemoryStore/MessagingService QA plus two-player trade/disconnect/rejoin reconciliation.
 
 Do not label or package `shake-vending-game-ULTIMATE.zip` as a final release until those in-engine gates are honestly cleared. A test/review package may be produced separately if explicitly requested.
