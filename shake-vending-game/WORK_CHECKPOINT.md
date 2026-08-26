@@ -53,19 +53,24 @@ Fast-seller upper-bound loop simulation after the refactor:
 
 Median unique discoveries at 75 minutes: **31**.
 
-## Documentation persisted this run
+## Production documentation now persisted
 
 - `FINAL_CHANGELOG.md`
+- `REFERENCE_NOTES.md`
+- `ASSET_CREDITS.md`
+- `VISUAL_ASSET_AUDIT.md` — 60/60 source mappings; all rows still require Studio visual QA
 - `MODEL_QA.md`
+- `ECONOMY_AUDIT.md`
 - `PERFORMANCE_AUDIT.md`
 - `STUDIO_VISUAL_QA.md`
 - `KNOWN_LIMITATIONS.md`
 - `PLAY_IN_STUDIO.md`
+- `LOOP_AUDIT.md`
 
-`STUDIO_VISUAL_QA.md` deliberately marks all in-engine checks NOT RUN instead of inventing visual/device QA.
+`ASSET_CREDITS.md` preserves the 40 manifest IDs and explicitly leaves unverified Creator Store creator/title metadata pending instead of inventing it. `STUDIO_VISUAL_QA.md` deliberately marks all in-engine checks NOT RUN.
 
 ## Remaining blockers before final package
 
-The runtime/source-persistence blocker is resolved, but the release is **not** fully certified. Roblox Studio/Luau runtime execution was unavailable in this run. Required in-engine checks still include Creator Store donor appearance/pivots/permissions, collisions/tray alignment, audio permissions/mix, mobile/gamepad layout on real emulation/devices, low-end performance profiling, published DataStore/MemoryStore/MessagingService behavior and two-player trade/disconnect reconciliation.
+The runtime/source/documentation persistence blockers are resolved, but the release is **not** fully certified. Roblox Studio/Luau runtime execution was unavailable in this run. Required in-engine checks still include Creator Store donor appearance/pivots/permissions, collisions/tray alignment, audio permissions/mix, mobile/gamepad layout on real emulation/devices, low-end performance profiling, published DataStore/MemoryStore/MessagingService behavior and two-player trade/disconnect reconciliation.
 
-Final documentation/provenance files from the master prompt still need to be mirrored/refreshed on the branch where absent (`REFERENCE_NOTES.md`, `ASSET_CREDITS.md`, `VISUAL_ASSET_AUDIT.md`). Final ZIP packaging must wait until the Studio verification matrix is actually executed; do not label the current branch visually release-ready yet.
+Final ZIP packaging must wait until the Studio verification matrix is actually executed; do not label the current branch visually release-ready yet. Static/source completion is not being treated as a substitute for that gate.
