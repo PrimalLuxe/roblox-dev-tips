@@ -18,20 +18,34 @@ config_text=(ROOT/'src/ReplicatedStorage/Shared/Config.lua').read_text()
 profile_text=(ROOT/'src/ReplicatedStorage/Shared/ProfileTemplate.lua').read_text()
 
 rank={name:int(r) for name,r in re.findall(r'(\w+)\s*=\s*\{\s*Rank\s*=\s*(\d+)',rarity_text)}
-mult_block=re.search(r'local machineValueMultiplier\s*=\s*\{(.*?)\}',items_text,re.S).group(1)
+mult_match=re.search(r'local machineValueMultiplier\s*=\s*\{(.*?)\}',items_text,re.S)
+if not mult_match:
+    raise RuntimeError('machineValueMultiplier table missing from ItemDefinitions.lua')
+mult_block=mult_match.group(1)
 mults={k:int(v.replace('_','')) for k,v in re.findall(r'(CornerStore|SugarRush|Energy|ToyCapsule|Luxury|Unknown)\s*=\s*([0-9_]+)',mult_block)}
 
+# ItemDefinitions uses compact one-line flat tables. Keep this parser aligned with static_check.py
+# so simulation failures indicate actual economy/progression problems instead of formatting drift.
 items={}
-for iid,b in re.findall(r'Items\.(\w+)\s*=\s*\{(.*?)\n\}',items_text,re.S):
+for iid,b in re.findall(r'Items\.(\w+)\s*=\s*\{([^{}]*)\}',items_text):
+    if iid=='ByMachine':
+        continue
     def sf(name,pat=r'([^,\n]+)'):
         m=re.search(rf'\b{name}\s*=\s*{pat}',b);return m.group(1).strip() if m else None
     machine=sf('Machine',r'"([^"]+)"')
-    if not machine: continue
+    if not machine:
+        continue
+    if machine not in mults:
+        raise RuntimeError(f'{iid}: missing value multiplier for machine {machine}')
     items.setdefault(machine,[]).append({
         'id':iid,'weight':int((sf('Weight') or '0').replace('_','')),
         'value':int((sf('BaseValue') or '0').replace('_',''))*mults[machine],
         'rarity':sf('Rarity',r'"([^"]+)"') or 'Common',
     })
+
+for machine in ['CornerStore','SugarRush','Energy','ToyCapsule','Luxury','Unknown']:
+    if len(items.get(machine,[]))!=10:
+        raise RuntimeError(f'{machine}: expected 10 simulated launch items, found {len(items.get(machine,[]))}')
 
 mut=[]
 for name,b in re.findall(r'(\w+)\s*=\s*\{([^}]*)\}',mut_text):
