@@ -47,18 +47,44 @@ MachineService:Init(RemoteService,DataService,RollService,InventoryService,Globa
 WorldInteractionService:Init(RemoteService,InventoryService)
 
 RemoteService.Functions.GetSnapshot.OnServerInvoke=function(player)
+    if not RemoteService:Allow(player,"snapshot",2,4) then return nil end
     local profile=DataService:GetProfile(player);if not profile then return nil end
-    return {Profile=Util.DeepCopy(profile),GoalState=ProgressionService:GetState(profile),Engagement=EngagementService:GetState(player),Event=EventService:GetCurrent(),ServerTime=os.time(),CreatorAssetsReady=ReplicatedStorage:GetAttribute("CreatorAssetsReady"),CreatorAssetsError=ReplicatedStorage:GetAttribute("CreatorAssetsError")}
+    return {
+        Profile=Util.DeepCopy(profile),
+        GoalState=ProgressionService:GetState(profile),
+        PassportState=ProgressionService:GetPassportState(profile),
+        MachineUnlocks=ProgressionService:GetMachineUnlockStates(profile),
+        Engagement=EngagementService:GetState(player),
+        Event=EventService:GetCurrent(),
+        ServerTime=os.time(),
+        CreatorAssetsReady=ReplicatedStorage:GetAttribute("CreatorAssetsReady"),
+        CreatorAssetsError=ReplicatedStorage:GetAttribute("CreatorAssetsError"),
+    }
 end
 
 RemoteService.Functions.GetPlayerSummary.OnServerInvoke=function(player,userId)
+    if not RemoteService:Allow(player,"summary",2,5) then return nil end
     if type(userId)~="number" then return nil end
     local summary=DataService:GetPublicSummary(userId);local target=Players:GetPlayerByUserId(userId)
     if summary and target then summary.Name=target.Name;summary.DisplayName=target.DisplayName end
     return summary
 end
 
+RemoteService.Events.HuntAction.OnServerEvent:Connect(function(player,itemId,shouldTrack)
+    if not RemoteService:Allow(player,"hunt",3,6) then return end
+    local ok,message=ProgressionService:SetHunt(player,itemId,shouldTrack)
+    RemoteService.Events.Toast:FireClient(player,{Text=tostring(message),Kind=ok and "Info" or "Warn"})
+end)
+
+RemoteService.Events.PassportAction.OnServerEvent:Connect(function(player,action,worldId)
+    if not RemoteService:Allow(player,"passport",2,4) then return end
+    if action~="stamp" then return end
+    local ok,message=ProgressionService:TryStampWorld(player,worldId)
+    RemoteService.Events.Toast:FireClient(player,{Text=tostring(message),Kind=ok and "New" or "Warn"})
+end)
+
 RemoteService.Events.InventoryAction.OnServerEvent:Connect(function(player,action,instanceId)
+    if not RemoteService:Allow(player,"inventory",7,12) then return end
     if type(action)~="string" then return end
     if action=="sell" and type(instanceId)=="string" then
         local ok,value=InventoryService:Sell(player,instanceId)
