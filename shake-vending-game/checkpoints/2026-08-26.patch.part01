@@ -1,0 +1,110 @@
+WORLD")
++        RunService.Heartbeat:Wait()
++    end
++    if completed>=#ids then
++        setProgress(completed,#ids,"READY")
++    else
++        setProgress(completed,#ids,"CONTINUING IN BACKGROUND")
++    end
++else
++    setProgress(1,1,"READY")
++end
++
++-- Profile data may have arrived while world assets were loading; re-check before the expensive transition.
++introSeen = player:GetAttribute("ShakeVM_IntroSeen") == true
++reducedEffects = player:GetAttribute("ShakeVM_ReducedEffects") == true
++task.wait((introSeen or reducedEffects) and 0.05 or 0.18)
++
++-- Non-AI glass fracture overlay using a curated Creator Store decal.
++local crack = Instance.new("ImageLabel")
++crack.AnchorPoint = Vector2.new(0.5,0.5)
++crack.Position = UDim2.fromScale(0.5,0.5)
++crack.Size = UDim2.fromScale(1.08,1.08)
++crack.BackgroundTransparency = 1
++crack.Image = "rbxassetid://10843220925"
++crack.ImageColor3 = Color3.fromRGB(238,244,255)
++crack.ImageTransparency = (introSeen or reducedEffects) and 1 or 0.20
++crack.ScaleType = Enum.ScaleType.Crop
++crack.Parent = root
++
++if not introSeen and not reducedEffects then
++    local flash = Instance.new("Frame")
++    flash.Size=UDim2.fromScale(1,1)
++    flash.BackgroundColor3=Color3.new(1,1,1)
++    flash.BackgroundTransparency=1
++    flash.BorderSizePixel=0
++    flash.Parent=root
++    TweenService:Create(flash,TweenInfo.new(0.05),{BackgroundTransparency=0.15}):Play()
++    task.wait(0.055)
++    TweenService:Create(flash,TweenInfo.new(0.18),{BackgroundTransparency=1}):Play()
++    TweenService:Create(crack,TweenInfo.new(0.28,Enum.EasingStyle.Quint,Enum.EasingDirection.Out),{ImageTransparency=1,Size=UDim2.fromScale(1.24,1.24)}):Play()
++end
++
++TweenService:Create(root,TweenInfo.new((introSeen or reducedEffects) and 0.16 or 0.34,Enum.EasingStyle.Quint,Enum.EasingDirection.In),{BackgroundTransparency=1}):Play()
++for _,d in ipairs(root:GetDescendants()) do
++    if d:IsA("TextLabel") then TweenService:Create(d,TweenInfo.new(0.22),{TextTransparency=1}):Play()
++    elseif d:IsA("Frame") and d ~= root then TweenService:Create(d,TweenInfo.new(0.22),{BackgroundTransparency=1}):Play() end
++end
++
++task.wait((introSeen or reducedEffects) and 0.18 or 0.36)
++gui:Destroy()
++
++local remotes = ReplicatedStorage:FindFirstChild("Remotes")
++local settings = remotes and remotes:FindFirstChild("SettingsAction")
++if settings and settings:IsA("RemoteEvent") and not introSeen then settings:FireServer("intro_seen",true) end
+diff -ruN '--exclude=rojo.exe' /mnt/data/shake_vending_orig/shake-vending-game-FINAL/src/ReplicatedStorage/Shared/AssetManifest.lua /mnt/data/shake_vending_work/shake-vending-game-FINAL/src/ReplicatedStorage/Shared/AssetManifest.lua
+--- /mnt/data/shake_vending_orig/shake-vending-game-FINAL/src/ReplicatedStorage/Shared/AssetManifest.lua	2026-08-26 03:20:17.000000000 +0000
++++ /mnt/data/shake_vending_work/shake-vending-game-FINAL/src/ReplicatedStorage/Shared/AssetManifest.lua	2026-08-26 15:57:33.179351989 +0000
+@@ -3,47 +3,47 @@
+ -- The game never executes code from a Creator Store model.
+ return {
+     -- Core environment / UI donors
+-    VendingMachine = { Id=1924472602, Role="Machine", AutoLoad=true, Note="Verified scriptless vending-machine build" },
+-    VendingMachineDetailed = { Id=123896408090626, Role="Machine", AutoLoad=true, Note="Detailed food/drink vending donor; all 29 scripts/tools/audio stripped before use" },
+-    VendingMachineStudded = { Id=5854772913, Role="Machine", AutoLoad=true, Note="1-stud old Roblox style vending machine; scripts stripped" },
+-    VendingMachineModern = { Id=73930515908550, Role="Machine", AutoLoad=true, Note="Modern free Bloxy Cola vending donor; compact mesh" },
+-    HubShop = { Id=140650365354389, Role="World", AutoLoad=true, Note="FREE Grow a Garden Shop v2" },
+-    CollectionShop = { Id=110652161904837, Role="World", AutoLoad=true, Note="Grow a Garden cosmetics/crafting shop used as collection-gallery donor" },
+-    GardenPlot = { Id=132198808290621, Role="World", AutoLoad=true, Note="Highly rated Grow a Garden plot donor for studded hub detailing" },
+-    LowPolyShop = { Id=17380100820, Role="World", AutoLoad=true, Note="Free low-poly shop" },
+-    LowPolyDecor = { Id=16267075451, Role="World", AutoLoad=true, Note="Free low-poly asset pack" },
+-    PineTree = { Id=183435411, Role="World", AutoLoad=true, Note="Highly used free Quenty pine tree" },
+-    Podium = { Id=4180574986, Role="Podium", AutoLoad=true, Note="Free statue pedestal" },
+-    SellATM = { Id=3893560084, Role="World", AutoLoad=true, Note="Free Basic ATM" },
+-    SimulatorUI = { Id=6177977821, Role="UI", AutoLoad=true, Note="Free Simulator UI style donor; scripts stripped" },
++    VendingMachine = { Id=1924472602, LoadPhase="Critical", Role="Machine", AutoLoad=true, Note="Verified scriptless vending-machine build" },
++    VendingMachineDetailed = { Id=123896408090626, LoadPhase="Critical", Role="Machine", AutoLoad=true, Note="Detailed food/drink vending donor; all 29 scripts/tools/audio stripped before use" },
++    VendingMachineStudded = { Id=5854772913, LoadPhase="Warm", Role="Machine", AutoLoad=true, Note="1-stud old Roblox style vending machine; scripts stripped" },
++    VendingMachineModern = { Id=73930515908550, LoadPhase="Warm", Role="Machine", AutoLoad=true, Note="Modern free Bloxy Cola vending donor; compact mesh" },
++    HubShop = { Id=140650365354389, LoadPhase="Critical", Role="World", AutoLoad=true, Note="FREE Grow a Garden Shop v2" },
++    CollectionShop = { Id=110652161904837, LoadPhase="Warm", Role="World", AutoLoad=true, Note="Grow a Garden cosmetics/crafting shop used as collection-gallery donor" },
++    GardenPlot = { Id=132198808290621, LoadPhase="Warm", Role="World", AutoLoad=true, Note="Highly rated Grow a Garden plot donor for studded hub detailing" },
++    LowPolyShop = { Id=17380100820, LoadPhase="Warm", Role="World", AutoLoad=true, Note="Free low-poly shop" },
++    LowPolyDecor = { Id=16267075451, LoadPhase="Warm", Role="World", AutoLoad=true, Note="Free low-poly asset pack" },
++    PineTree = { Id=183435411, LoadPhase="Warm", Role="World", AutoLoad=true, Note="Highly used free Quenty pine tree" },
++    Podium = { Id=4180574986, LoadPhase="Critical", Role="Podium", AutoLoad=true, Note="Free statue pedestal" },
++    SellATM = { Id=3893560084, LoadPhase="Critical", Role="World", AutoLoad=true, Note="Free Basic ATM" },
++    SimulatorUI = { Id=6177977821, LoadPhase="Critical", Role="UI", AutoLoad=true, Note="Free Simulator UI style donor; scripts stripped" },
+ 
+     -- Item model donors. Multiple catalog entries deliberately share a strong base asset,
+     -- then get recolored/restyled/mutated so the whole collection stays visually coherent.
+-    SodaCan = { Id=18238736152, Role="Item", AutoLoad=true },
+-    SodaCanMesh = { Id=11962184173, Role="Item", AutoLoad=true },
+-    BloxyColaMesh = { Id=8761745867, Role="Item", AutoLoad=true },
+-    BloxyColaProp = { Id=5238761267, Role="Item", AutoLoad=true },
+-    WaterBottle = { Id=17473392905, Role="Item", AutoLoad=true },
+-    Bottle = { Id=8752764216, Role="Item", AutoLoad=true },
+-    BottleCustom = { Id=87202443207548, Role="Item", AutoLoad=true },
+-    DrinkBottle = { Id=5127364594, Role="Item", AutoLoad=true },
+-    PotatoChips = { Id=11542524323, Role="Item", AutoLoad=true },
+-    ChipsPack = { Id=15343999257, Role="Item", AutoLoad=true },
+-    Chocolate = { Id=5212600780, Role="Item", AutoLoad=true },
+-    GummyBears = { Id=5670289254, Role="Item", AutoLoad=true },
+-    Lollipop = { Id=5053108042, Role="Item", AutoLoad=true },
+-    CandyPack = { Id=8800370694, Role="Item", AutoLoad=true },
+-    RobotToy = { Id=982342953, Role="Item", AutoLoad=true },
+-    RobotToyAlt = { Id=974904281, Role="Item", AutoLoad=true },
+-    TinyRobot = { Id=981959327, Role="Item", AutoLoad=true },
+-    RubberDuck = { Id=112596010768171, Role="Item", AutoLoad=true },
+-    StoreItemsPack = { Id=404157586, Role="Item", AutoLoad=true },
+-    CookieStack = { Id=934871698, Role="Item", Auto
