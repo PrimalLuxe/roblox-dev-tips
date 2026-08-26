@@ -36,5 +36,7 @@ jobs:
         run: python tools/static_check.py
       - name: Presentation persistence audit
         run: python tools/presentation_check.py
-      - name: Economy regression simulation
-        run: python tools/economy_sim.py
+      - name: Visual quality source audit
+        run: python tools/visual_quality_check.py
+      - name: Economy and progression loop simulation
+        run: python tools/loop_sim.py
