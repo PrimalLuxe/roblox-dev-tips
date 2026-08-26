@@ -32,13 +32,13 @@ The release-critical Rojo text source is persisted on the production branch. Cli
 
 `UITheme.lua` owns a warm cream/navy/vending-blue/restrained-gold retail palette rather than copying a free simulator donor at runtime. `UIComponents.lua` supplies reusable tactile cards/buttons, physical shadow layers, outlines, hover/press states, gamepad selection and confirmation-modal primitives.
 
-`HudArtDirector.lua` and `CollectionArtDirector.lua` are both persisted. `ClientBootstrap.client.lua` now explicitly applies both directors after `UI:Build`, so the authored collection cards/search/sort presentation is not dead source.
+`HudArtDirector.lua` and `CollectionArtDirector.lua` are both persisted. `ClientBootstrap.client.lua` explicitly applies both directors after `UI:Build`, so the authored HUD and collection cards/search/sort presentation are wired runtime systems rather than dead source.
 
 ### Reveal / mutation language
 
 `VFXManifest.lua` defines distinct visual families for all 12 launch mutations. `DropVisualController.lua` consumes those definitions and keeps effects client-side/quality-bounded: rarity rays, high-tier discovery beam, differentiated mutation particles/lights, physical rarity card and high-tier screen treatment. No external VFX texture IDs were fabricated.
 
-### Vending machine art — runtime wiring fixed
+### Vending machine art — primary construction integration
 
 `MachineArtDirector.lua` provides six machine families using the sanitized Creator Store vending donor as a chassis and adding an authored layer named `OlympusKitbash`:
 
@@ -55,7 +55,7 @@ The release-critical Rojo text source is persisted on the production branch. Cli
 - subtle interior light;
 - family-specific fascia/trim details for Corner Store, Sugar Rush, Energy, Toy Capsule, Luxury and Unknown.
 
-A persistence defect was found in this run: the art director existed but `WorldBuilder` never called it. `WorldBuilder.makeMachine` now requires and executes `MachineArtDirector.Apply(model,shell,machineId)` **before** final bounds, collision-hull and drop-spawn placement. This means the authored vending layer is now part of runtime construction instead of orphaned source.
+Before this run the art layer was already applied by the secondary `WorldPolishService` pass, so it was not truly orphaned. The weakness was that `WorldBuilder` measured the donor shell and created root/collision/drop placement **before** that secondary art pass. `WorldBuilder.makeMachine` now requires and executes `MachineArtDirector.Apply(model,shell,machineId)` before final bounds, collision-hull and drop-spawn placement. `WorldPolishService` sees `ArtDirectionVersion == 2` and skips duplicate machine construction. This makes the authored fascia part of primary machine construction and keeps bounds/reveal placement deterministic.
 
 ### Physical machine interaction polish
 
@@ -69,54 +69,73 @@ A persistence defect was found in this run: the art director existed but `WorldB
 6. CLUNK with tray kick rather than another full-machine shake;
 7. clean restoration to the exact starting pivot/state.
 
-Shake magnitude scales modestly with Overdrive/combo data when present and remains deliberately sub-stud. The controller uses `xpcall` + a restoration path so interrupted animation does not leave a machine, tray, lights or keypad in a mutated client state.
+Shake magnitude scales modestly with Overdrive/combo data when present and remains deliberately sub-stud. The controller uses `xpcall` plus a restoration path so an interrupted animation does not leave a machine, tray, lights or keypad in a mutated client state.
 
-## QA tooling added this run
+## QA tooling and CI added this run
 
-A new `tools/presentation_check.py` regression audit now fails if authored presentation exists but is no longer wired into runtime. It checks:
+`tools/presentation_check.py` now fails if authored presentation exists but is no longer wired into runtime. It checks WorldBuilder → MachineArtDirector integration, machine fascia/product/control/tray hardware markers, staged interaction markers, and authored collection UI bootstrap wiring.
 
-- `WorldBuilder` → `MachineArtDirector` wiring;
-- expected machine fascia/product/control/tray hardware markers;
-- staged machine-interaction markers;
-- authored collection UI wiring from client bootstrap.
+The existing parsers in `tools/static_check.py` and `tools/loop_sim.py` were repaired for the current compact one-line `ItemDefinitions.lua` format. The assertions were not weakened: both tools still require exactly 60 launch items and 10 items for each of the six machines.
 
-A repository workflow, `.github/workflows/shake-vending-production-checks.yml`, now defines production-branch CI for:
+`.github/workflows/shake-vending-production-checks.yml` now runs on production-branch source changes with read-only repository permissions:
 
 ```bash
 python tools/static_check.py
 python tools/presentation_check.py
-python tools/economy_sim.py
+python tools/visual_quality_check.py
+python tools/loop_sim.py
 ```
-
-The workflow is intentionally read-only (`contents: read`), path-scoped and timeout-bounded.
 
 ## Validation performed in this run
 
 The production branch was inspected before changes at commit `a252ec23c70c5dec1aba988d2e244f65ff6bb98d`.
 
-Post-change source was persisted through GitHub commits and key files were re-read through the GitHub connector.
+A direct local checkout from the execution container could not resolve `github.com`; that limitation was not treated as a pass. GitHub Actions was then added so the exact persisted branch could be checked independently.
 
-A direct local checkout was attempted to execute the full audit suite:
+The CI run for commit `8c993c6ffd0e36247891a7789022aa9393d53bc9` completed successfully across all four checks.
 
-```text
-git clone --depth 1 --branch shake-vending-production https://github.com/PrimalLuxe/roblox-dev-tips.git
-fatal: unable to access ... Could not resolve host: github.com
-```
-
-Therefore a fresh full repository PASS was **not** fabricated. GitHub Actions history was queried after adding the workflow and returned zero runs at that moment, so CI completion is not being claimed either.
-
-The prior recorded full static audit remains historical evidence only:
+### Static structural audit — PASS
 
 ```text
 ShakeVM static audit
-  items: 60 | 10 per machine across 6 machines
+  items: 60 | per machine: 10 each across CornerStore, SugarRush, Energy, ToyCapsule, Luxury, Unknown
   mutations: 12 + None
-  creator-store base assets: 40
-  lua files: 46
+  creator-store base assets: 49
+  lua files: 52
 PASS: referential integrity, feature markers, runtime asset safety, and lightweight structural checks.
 ```
 
-A fresh local/CI run is still required for the current revision.
+### Presentation persistence audit — PASS
+
+```text
+world art wiring: OK
+machine authored fascia: OK
+staged physical interaction: OK
+authored collection UI wiring: OK
+PASS: authored presentation systems are persisted and wired into runtime entry points.
+```
+
+### Visual-quality source guardrails — PASS
+
+```text
+PASS: authored machine kitbash, staged physical interaction, distinct Downtown districts,
+HUD/collection hierarchy, safe donor extraction, UI identity, and reveal-language guardrails present.
+```
+
+### Progression loop simulation — PASS
+
+1,000 deterministic-seed fast-seller upper-bound runs:
+
+| Machine | P10 | Median | P90 | Reach by 75m |
+| --- | ---: | ---: | ---: | ---: |
+| Sugar Rush | 1:53 | 2:48 | 3:25 | 100% |
+| Energy | 3:27 | 4:44 | 5:39 | 100% |
+| Toy Capsule | 10:40 | 13:44 | 15:36 | 100% |
+| Luxury | 25:44 | 32:00 | 35:42 | 100% |
+
+Median unique discoveries at 75 minutes: **31**.
+
+This is a static economy/progression simulation, not a Roblox Studio playtest.
 
 ## Production documentation persisted
 
@@ -136,17 +155,16 @@ A fresh local/CI run is still required for the current revision.
 
 ## Remaining blockers before final package
 
-The source is materially closer to the master prompt, but it is **not visually release-certified**.
+The source passes the current automated structural/presentation/economy suite, but it is **not visually release-certified**.
 
 Highest remaining gates:
 
 1. Roblox Studio visual QA of all six runtime-kitbashed vending machines: donor orientation, fascia alignment, glass/product clipping, tray/drop-spawn placement, collision hulls and pivots.
 2. Studio visual QA of all 60 item donors in collection/reveal/showcase contexts; replace mismatched donors rather than accepting them because an ID loads.
-3. Further world art dressing. The six-district composition and donor facades exist, but paths/pads/sign anchors are still intentionally simple structural geometry and should be visually assessed against the master prompt's commercial-district bar.
+3. Further world-art judgment in Studio. The six-district composition, district art director, premium donor facades and street decor exist, but the overall scene still needs real-camera comparison against the master prompt's front-page commercial-district bar.
 4. Audio asset permissions/mix and reveal timing in a published experience.
 5. Mobile/tablet/gamepad safe-area and focus QA on actual Studio emulation/devices.
 6. Low-end performance profiling with 100+ inventory items, multiple players, effects and showcases.
 7. Published DataStore/MemoryStore/MessagingService behavior and two-player trade/disconnect reconciliation.
-8. Fresh execution of `static_check.py`, `presentation_check.py` and `economy_sim.py` on the exact current branch.
 
 Do not package or label `shake-vending-game-ULTIMATE.zip` as final until these gates are honestly cleared, or until a package is explicitly requested as a test build rather than a release-certified build.
