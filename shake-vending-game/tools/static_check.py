@@ -16,7 +16,9 @@ remote_text=(SRC/'ReplicatedStorage/Shared/RemoteNames.lua').read_text()
 world_text=(SRC/'ReplicatedStorage/Shared/WorldDefinitions.lua').read_text() if (SRC/'ReplicatedStorage/Shared/WorldDefinitions.lua').exists() else ''
 profile_text=(SRC/'ReplicatedStorage/Shared/ProfileTemplate.lua').read_text()
 
-item_blocks=re.findall(r'Items\.([A-Za-z0-9_]+)\s*=\s*\{(.*?)\n\}',item_text,re.S)
+# Launch items are intentionally compact one-line table assignments. Match each flat item table
+# rather than requiring the older multiline closing-brace format.
+item_blocks=re.findall(r'Items\.([A-Za-z0-9_]+)\s*=\s*\{([^{}]*)\}',item_text)
 items=[]
 for name,body in item_blocks:
     if name=='ByMachine': continue
@@ -78,11 +80,11 @@ required=[
  'ServerScriptService/Services/DataService.lua','ServerScriptService/Services/ProgressionService.lua','ServerScriptService/Services/EngagementService.lua','ServerScriptService/Services/MachineService.lua','ServerScriptService/Services/RollService.lua',
  'ServerScriptService/Services/CollectionService.lua','ServerScriptService/Services/InventoryService.lua','ServerScriptService/Services/CosmeticService.lua',
  'ServerScriptService/Services/ShowcaseService.lua','ServerScriptService/Services/GlobalService.lua','ServerScriptService/Services/EventService.lua',
- 'ServerScriptService/Services/TradingService.lua','ServerScriptService/Services/UpgradeService.lua','ServerScriptService/Services/WorldBuilder.lua',
+ 'ServerScriptService/Services/TradingService.lua','ServerScriptService/Services/UpgradeService.lua','ServerScriptService/Services/WorldBuilder.lua','ServerScriptService/Services/MachineArtDirector.lua',
  'StarterPlayer/StarterPlayerScripts/Controllers/DropVisualController.lua','StarterPlayer/StarterPlayerScripts/Controllers/UIController.lua',
  'StarterPlayer/StarterPlayerScripts/Controllers/TradeController.lua','StarterPlayer/StarterPlayerScripts/Controllers/InspectController.lua',
  'StarterPlayer/StarterPlayerScripts/Controllers/AudioController.lua','StarterPlayer/StarterPlayerScripts/Controllers/OnboardingController.lua',
- 'StarterPlayer/StarterPlayerScripts/Controllers/UIComponents.lua','StarterPlayer/StarterPlayerScripts/Controllers/ShowcaseController.lua','StarterPlayer/StarterPlayerScripts/Controllers/WorldLoopController.lua','ReplicatedStorage/Shared/SoundManifest.lua','ReplicatedStorage/Shared/VFXManifest.lua','ReplicatedStorage/Shared/WorldDefinitions.lua',
+ 'StarterPlayer/StarterPlayerScripts/Controllers/UIComponents.lua','StarterPlayer/StarterPlayerScripts/Controllers/ShowcaseController.lua','StarterPlayer/StarterPlayerScripts/Controllers/WorldLoopController.lua','StarterPlayer/StarterPlayerScripts/Controllers/MachineInteractionController.lua','StarterPlayer/StarterPlayerScripts/Controllers/CollectionArtDirector.lua','StarterPlayer/StarterPlayerScripts/Controllers/HudArtDirector.lua','ReplicatedStorage/Shared/SoundManifest.lua','ReplicatedStorage/Shared/VFXManifest.lua','ReplicatedStorage/Shared/WorldDefinitions.lua',
 ]
 for rel in required:
     if not (SRC/rel).exists(): err(f'missing required module {rel}')
@@ -130,6 +132,7 @@ world_builder=(SRC/'ServerScriptService/Services/WorldBuilder.lua').read_text()
 if any(x in visual_factory for x in ['buildCan(', 'buildBottle(', 'buildBag(', 'buildRobot(', 'buildCapsule(']):
     err('ItemVisualFactory contains procedural item builders; Creator Store donor pipeline regressed')
 if 'VendingMachineDetailed' not in world_builder: err('WorldBuilder is not using the detailed Creator Store vending donor')
+if 'MachineArtDirector.Apply(model,shell,machineId)' not in world_builder: err('authored vending kitbash is not wired into WorldBuilder runtime construction')
 if 'CollectionShop' not in world_builder or 'GardenPlot' not in world_builder: err('Creator Store collection/gallery environment assets are missing')
 if 'ProgressionService' not in (SRC/'ServerScriptService/Bootstrap.server.lua').read_text(): err('rank-goal progression not wired into bootstrap')
 asset_loader=(SRC/'ServerScriptService/Services/AssetLoadService.lua').read_text()
@@ -169,13 +172,15 @@ def require_targets(text, owner):
 
 require_targets((SRC/'StarterPlayer/StarterPlayerScripts/ClientBootstrap.client.lua').read_text(), 'ClientBootstrap')
 require_targets((SRC/'ServerScriptService/Bootstrap.server.lua').read_text(), 'Bootstrap.server')
-required_runtime = [SRC/'ReplicatedStorage/Shared/ItemVisualFactory.lua',SRC/'StarterPlayer/StarterPlayerScripts/Controllers/UIController.lua',SRC/'StarterPlayer/StarterPlayerScripts/Controllers/DropVisualController.lua',SRC/'StarterPlayer/StarterPlayerScripts/Controllers/MachineController.lua',SRC/'StarterPlayer/StarterPlayerScripts/Controllers/TradeController.lua',SRC/'StarterPlayer/StarterPlayerScripts/Controllers/InspectController.lua']
+required_runtime = [SRC/'ReplicatedStorage/Shared/ItemVisualFactory.lua',SRC/'StarterPlayer/StarterPlayerScripts/Controllers/UIController.lua',SRC/'StarterPlayer/StarterPlayerScripts/Controllers/DropVisualController.lua',SRC/'StarterPlayer/StarterPlayerScripts/Controllers/MachineController.lua',SRC/'StarterPlayer/StarterPlayerScripts/Controllers/MachineInteractionController.lua',SRC/'StarterPlayer/StarterPlayerScripts/Controllers/TradeController.lua',SRC/'StarterPlayer/StarterPlayerScripts/Controllers/InspectController.lua']
 for target in required_runtime:
     if not target.exists(): err(f'missing release-critical persisted source: {target.relative_to(ROOT)}')
 
 client_boot=(SRC/'StarterPlayer/StarterPlayerScripts/ClientBootstrap.client.lua').read_text()
 if 'WorldLoop:Init(events,functions,UI)' not in client_boot:
     err('world-loop regression: WorldLoopController exists but is not initialized by ClientBootstrap')
+if 'CollectionArt:Apply(UI)' not in client_boot:
+    err('collection art regression: CollectionArtDirector exists but is not applied by ClientBootstrap')
 
 print('ShakeVM static audit')
 print('  items:',len(items),' | per machine:',dict(sorted(counts.items())))
