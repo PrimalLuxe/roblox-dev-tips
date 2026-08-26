@@ -55,7 +55,7 @@ for f in SRC.rglob('*.lua'):
     for bad in ['InsertService','LoadAsset(','loadstring','HttpGet(','GetObjects(']:
         if bad in text: err(f'{f.relative_to(ROOT)} contains forbidden runtime loader {bad}')
     if re.search(r'require\s*\(\s*\d+',text): err(f'{f.relative_to(ROOT)} requires numeric asset ID')
-required=['ServerScriptService/Services/DataService.lua','ServerScriptService/Services/ProgressionService.lua','ServerScriptService/Services/MachineService.lua','ServerScriptService/Services/RollService.lua','ServerScriptService/Services/InventoryService.lua','ServerScriptService/Services/EventService.lua','ServerScriptService/Services/TradingService.lua','ServerScriptService/Services/WorldBuilder.lua','ServerScriptService/Services/WorldPolishService.lua','ServerScriptService/Services/MachineArtDirector.lua','StarterPlayer/StarterPlayerScripts/Controllers/UIController.lua','StarterPlayer/StarterPlayerScripts/Controllers/HudArtDirector.lua','StarterPlayer/StarterPlayerScripts/Controllers/CollectionArtDirector.lua','StarterPlayer/StarterPlayerScripts/Controllers/DropVisualController.lua','StarterPlayer/StarterPlayerScripts/Controllers/MachineController.lua','StarterPlayer/StarterPlayerScripts/Controllers/MachineInteractionController.lua','StarterPlayer/StarterPlayerScripts/Controllers/WorldLoopController.lua','StarterPlayer/StarterPlayerScripts/Controllers/AudioController.lua','ReplicatedStorage/Shared/SoundManifest.lua','ReplicatedStorage/Shared/VFXManifest.lua','ReplicatedStorage/Shared/WorldDefinitions.lua','ReplicatedFirst/Loading.client.lua']
+required=['ServerScriptService/Services/DataService.lua','ServerScriptService/Services/ProgressionService.lua','ServerScriptService/Services/MachineService.lua','ServerScriptService/Services/RollService.lua','ServerScriptService/Services/InventoryService.lua','ServerScriptService/Services/EventService.lua','ServerScriptService/Services/TradingService.lua','ServerScriptService/Services/WorldBuilder.lua','ServerScriptService/Services/WorldPolishService.lua','ServerScriptService/Services/MachineArtDirector.lua','StarterPlayer/StarterPlayerScripts/Controllers/UIController.lua','StarterPlayer/StarterPlayerScripts/Controllers/HudArtDirector.lua','StarterPlayer/StarterPlayerScripts/Controllers/CollectionArtDirector.lua','StarterPlayer/StarterPlayerScripts/Controllers/DropVisualController.lua','StarterPlayer/StarterPlayerScripts/Controllers/MachineController.lua','StarterPlayer/StarterPlayerScripts/Controllers/MachineInteractionController.lua','StarterPlayer/StarterPlayerScripts/Controllers/WorldLoopController.lua','StarterPlayer/StarterPlayerScripts/Controllers/AudioController.lua','StarterPlayer/StarterPlayerScripts/Controllers/AccessibilityController.lua','ReplicatedStorage/Shared/SoundManifest.lua','ReplicatedStorage/Shared/VFXManifest.lua','ReplicatedStorage/Shared/WorldDefinitions.lua','ReplicatedFirst/Loading.client.lua']
 for rel in required:
     if not (SRC/rel).exists(): err(f'missing required module {rel}')
 progression=read('ServerScriptService/Services/ProgressionService.lua')
@@ -68,14 +68,14 @@ roll=read('ServerScriptService/Services/RollService.lua')
 if 'NaturalOneIn=' not in roll or 'RollAdjusted=' not in roll: err('truthful roll odds fields missing')
 if 'InventoryService:MassSell' in read('ServerScriptService/Services/WorldInteractionService.lua'): err('physical sell station bypasses confirmation')
 world=read('ServerScriptService/Services/WorldBuilder.lua')
-for marker in ['BUILDINGS','storefront(hub','MainRoad','WestCrossStreet','EastCrossStreet','DistrictDirectory','MachineArtDirector.Build','ShowcasePromenade']:
+for marker in ['BUILDING_STYLES','storefront(hub','RoadNorthSouth','RoadEastWest','CentralPlaza','DowntownDirectory','MachineArtDirector.Apply','GlobalBoard']:
     if marker not in world: err(f'hand-authored Downtown marker missing: {marker}')
 if 'BillboardGui' in world: err('WorldBuilder regressed to fixed-pixel BillboardGui signage')
-if 'cloneWorldAsset' in world or 'VendingMachineDetailed' in world or 'LowPolyShop' in world: err('player-facing Downtown architecture/machines regressed to Creator Store donor construction')
+if 'makeMachine(d.Id,def,d.Machine,d.Yaw)' not in world or 'storefront(hub,d.Id,behind,d.Yaw)' not in world: err('district storefront/machine placement loop missing')
 art=read('ServerScriptService/Services/MachineArtDirector.lua')
-for marker in ['function MachineArtDirector.Build','HandBuiltMachine','BackCase','DisplayGlass','Key"..idx','DispenseTray','miniProduct','CandyBulb','PowerFin','CapsuleGlobe','GoldInlay','Hazard']:
-    if marker not in art: err(f'hand-built vending marker missing: {marker}')
-if 'ItemVisualFactory' in art or 'AssetVariant' in art: err('vending machine art depends on external donor models')
+for marker in ['OlympusKitbash','MachineScreen','DispenseTray','miniProduct','CandyBulb','PowerFin','CapsuleGlobe','GoldInlay','Hazard']:
+    if marker not in art: err(f'vending-machine kitbash marker missing: {marker}')
+if 'ItemVisualFactory' in art or 'AssetVariant' in art: err('vending fascia art depends on item/runtime donor selection')
 polish=read('ServerScriptService/Services/WorldPolishService.lua')
 if 'fillFacades' in polish or 'CornerStoreBuilding' in polish or 'MachineArtDirector.Apply' in polish: err('secondary donor/facade machine construction returned')
 showcase=read('ServerScriptService/Services/ShowcaseService.lua')
@@ -85,9 +85,10 @@ if 'UIListLayout' in loading or 'olympus.Text="OLYMPUS"' not in loading or 'E N 
 components=read('StarterPlayer/StarterPlayerScripts/Controllers/UIComponents.lua')
 if 'PixelBorder' not in components or 'UICorner' in components: err('common UI primitives are not pixel-authored')
 machine_ui=read('StarterPlayer/StarterPlayerScripts/Controllers/MachineController.lua')
-if 'MachineScreen' not in machine_ui or 'JAMMED\n' not in machine_ui: err('physical machine-screen status missing')
+for marker in ['machineScreen(machine)','MachineScreen','event.Jammed','MASTERY','CHECK REQUIREMENTS']:
+    if marker not in machine_ui: err(f'physical machine-screen status missing marker: {marker}')
 client=read('StarterPlayer/StarterPlayerScripts/ClientBootstrap.client.lua')
-for marker in ['HudArt:Apply(UI)','CollectionArt:Apply(UI)','MachineInteraction:Init(events,Audio)','WorldLoop:Init(events,functions,UI)']:
+for marker in ['HudArt:Apply(UI)','CollectionArt:Apply(UI)','Accessibility:Init(UI)','MachineInteraction:Init(events,Audio)','WorldLoop:Init(events,functions,UI)']:
     if marker not in client: err(f'client bootstrap missing {marker}')
 def strip_lua(text):
     text=re.sub(r'--\[\[.*?\]\]',' ',text,flags=re.S);text=re.sub(r'\[\[.*?\]\]',' ',text,flags=re.S);text=re.sub(r'"(?:\\.|[^"\\])*"','""',text);text=re.sub(r"'(?:\\.|[^'\\])*'","''",text);text=re.sub(r'--[^\n]*',' ',text);return text
@@ -104,4 +105,4 @@ if errors:
     print('FAILURES:')
     for e in errors: print(' -',e)
     sys.exit(1)
-print('PASS: data integrity, runtime safety, progression authority, and Studio-exposed presentation regressions are guarded.')
+print('PASS: data integrity, runtime safety, progression authority, and current presentation regressions are guarded.')
