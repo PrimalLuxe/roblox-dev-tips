@@ -9,18 +9,16 @@
 
 ## Runtime persistence status
 
-The release-critical text runtime is mirrored into the persistent branch, including `UIController.lua` and `DropVisualController.lua`. `ClientBootstrap.client.lua` can resolve its UI, reveal, machine, trade, inspect, audio, onboarding, showcase and WorldLoop controller requirements from the branch instead of relying on an external baseline.
+The release-critical Rojo text source is persisted on the production branch. Client bootstrap resolves UI, reveal, machine, trade, inspection, audio, onboarding, showcase, world-loop, HUD art and collection-art controllers from source. Server bootstrap resolves the production data/progression/roll/inventory/cosmetic/showcase/trading/global/event/upgrade/world services.
 
-The branch also contains the AssetLoad, Inventory, Global, Roll, Engagement, Trading, Cosmetic and Showcase services plus the current DataService, RemoteService, SettingsService and UpgradeService implementations.
-
-## Major production state
+## Implemented production systems
 
 - Profile/data progression v5 with Vending Passport and 3-slot Hunt List.
 - Downtown launch world, multi-goal machine unlocks and event-only Unknown machine.
 - Server-authoritative Hunt/Passport, roll, inventory, upgrades, settings and trading actions.
 - Truthful obtained-roll (`OneIn`) and natural-pool (`NaturalOneIn`) odds.
-- Creator Store loading through `AssetService:LoadAssetAsync` with phased startup and donor sanitization.
-- Missing Creator Store item donors warn and omit the visual; fake `MISSING_CREATOR_ASSET_*` geometry is removed.
+- Creator Store loading through `AssetService:LoadAssetAsync` with phased startup and donor sanitation.
+- Missing Creator Store item donors warn/omit instead of spawning fake red placeholder geometry.
 - Protected mass selling, auto-lock, keep-one-each, favorites, shards, equipment and showcase references.
 - Responsive HUD/collection UI with catalog search/sort, viewport inspection, sell confirmation, upgrades, global board, settings and gamepad Back.
 - Wearable collectibles, auras, trails, titles, outfit slots, six editable showcase pedestals and rarest-item centerpiece.
@@ -28,27 +26,86 @@ The branch also contains the AssetLoad, Inventory, Global, Roll, Engagement, Tra
 - MemoryStore hourly rare board, MessagingService cross-server rare feed, restock events, cooperative Jammed progress, combo state and server-timed playtime gifts.
 - DataStore autosave snapshot-rewind race fixed; centralized token-bucket remote limiting present.
 
-## Presentation correction pass — current run
-
-The branch previously still had two source-level presentation shortcuts that did not satisfy the master prompt even though the systems existed.
+## Presentation correction state
 
 ### Original UI identity
 
-`UITheme.lua` no longer scans the free `SimulatorUI` donor at runtime and copies its darkest panel/accent/font. The runtime UI palette is now owned by ShakeVM: warm cream product-card surfaces, navy structure, vending blue, restrained gold, dark readable text, explicit success/warning/danger colors and consistent outline/shadow tokens.
+`UITheme.lua` owns a warm cream/navy/vending-blue/restrained-gold retail palette rather than copying a free simulator donor at runtime. `UIComponents.lua` supplies reusable tactile cards/buttons, physical shadow layers, outlines, hover/press states, gamepad selection and confirmation-modal primitives.
 
-`UIComponents.lua` now builds reusable tactile retail primitives rather than plain dark rectangles: physical shadow layers, outlined cream cards, top-edge button sheen, hover/press tween states, explicit gamepad selection treatment, section-label chips and a redesigned confirmation modal. This is a source-level component architecture improvement; it is not being presented as a Studio-verified final visual result.
+`HudArtDirector.lua` and `CollectionArtDirector.lua` are both persisted. `ClientBootstrap.client.lua` now explicitly applies both directors after `UI:Build`, so the authored collection cards/search/sort presentation is not dead source.
 
-### Distinct reveal / mutation language
+### Reveal / mutation language
 
-`VFXManifest.lua` now defines separate mutation families for Shiny, Gold, Frozen, Flaming, Toxic, Crystal, Rainbow, Glitched, Shadow, Cosmic, Heavenly and Void instead of only tier particle counts.
+`VFXManifest.lua` defines distinct visual families for all 12 launch mutations. `DropVisualController.lua` consumes those definitions and keeps effects client-side/quality-bounded: rarity rays, high-tier discovery beam, differentiated mutation particles/lights, physical rarity card and high-tier screen treatment. No external VFX texture IDs were fabricated.
 
-`DropVisualController.lua` now consumes that manifest. Reveals use different Roblox effect classes/behaviors by mutation (sparkles, flame/embers, snow mist, toxic bubbles, smoke/collapse, glitch bits, spectrum/orbit/halo behavior), quality-scaled rarity rays, high-tier vertical discovery beams, mutation lights where appropriate, a cream physical rarity card, and a matching cream high-tier screen reveal. Common/remote effects remain bounded by existing quality and distance controls.
+### Vending machine art — runtime wiring fixed
 
-No external VFX texture or Creator Store asset IDs were invented in this pass. The implementation deliberately uses Roblox-native effect classes until a verified texture donor can be sourced and visually checked.
+`MachineArtDirector.lua` provides six machine families using the sanitized Creator Store vending donor as a chassis and adding an authored layer named `OlympusKitbash`:
 
-## Validation history
+- real glass display bay;
+- three internal shelves;
+- visible products generated from each machine's actual item definitions;
+- display screen;
+- keypad/buttons;
+- card reader and coin slot;
+- dispense tray;
+- lower access panel and vents;
+- feet/base hardware;
+- marquee/top signage;
+- subtle interior light;
+- family-specific fascia/trim details for Corner Store, Sugar Rush, Energy, Toy Capsule, Luxury and Unknown.
 
-The last full repository static audit recorded before this presentation pass was:
+A persistence defect was found in this run: the art director existed but `WorldBuilder` never called it. `WorldBuilder.makeMachine` now requires and executes `MachineArtDirector.Apply(model,shell,machineId)` **before** final bounds, collision-hull and drop-spawn placement. This means the authored vending layer is now part of runtime construction instead of orphaned source.
+
+### Physical machine interaction polish
+
+`MachineInteractionController.lua` was upgraded from product-only jiggle to a staged, locally visual interaction driven by the authoritative `DropSpawned` event:
+
+1. keypad acknowledgement and screen change;
+2. slight forward compression/lean;
+3. constrained spring rattle with product inertia;
+4. subtle interior-light response;
+5. short suspense settle;
+6. CLUNK with tray kick rather than another full-machine shake;
+7. clean restoration to the exact starting pivot/state.
+
+Shake magnitude scales modestly with Overdrive/combo data when present and remains deliberately sub-stud. The controller uses `xpcall` + a restoration path so interrupted animation does not leave a machine, tray, lights or keypad in a mutated client state.
+
+## QA tooling added this run
+
+A new `tools/presentation_check.py` regression audit now fails if authored presentation exists but is no longer wired into runtime. It checks:
+
+- `WorldBuilder` → `MachineArtDirector` wiring;
+- expected machine fascia/product/control/tray hardware markers;
+- staged machine-interaction markers;
+- authored collection UI wiring from client bootstrap.
+
+A repository workflow, `.github/workflows/shake-vending-production-checks.yml`, now defines production-branch CI for:
+
+```bash
+python tools/static_check.py
+python tools/presentation_check.py
+python tools/economy_sim.py
+```
+
+The workflow is intentionally read-only (`contents: read`), path-scoped and timeout-bounded.
+
+## Validation performed in this run
+
+The production branch was inspected before changes at commit `a252ec23c70c5dec1aba988d2e244f65ff6bb98d`.
+
+Post-change source was persisted through GitHub commits and key files were re-read through the GitHub connector.
+
+A direct local checkout was attempted to execute the full audit suite:
+
+```text
+git clone --depth 1 --branch shake-vending-production https://github.com/PrimalLuxe/roblox-dev-tips.git
+fatal: unable to access ... Could not resolve host: github.com
+```
+
+Therefore a fresh full repository PASS was **not** fabricated. GitHub Actions history was queried after adding the workflow and returned zero runs at that moment, so CI completion is not being claimed either.
+
+The prior recorded full static audit remains historical evidence only:
 
 ```text
 ShakeVM static audit
@@ -59,25 +116,14 @@ ShakeVM static audit
 PASS: referential integrity, feature markers, runtime asset safety, and lightweight structural checks.
 ```
 
-A fresh full `tools/static_check.py` execution could **not** be run in this automation environment after the current commits because direct GitHub network access from the execution container is blocked. The changed files were persisted through the GitHub connector, and the branch was re-read through the connector, but this limitation means the previous PASS must not be represented as post-change certification. A fresh local/CI static run and Roblox Studio parse/run are required for this revision.
-
-Fast-seller upper-bound loop simulation from the prior validated refactor:
-
-| Machine | P10 | Median | P90 | Reach by 75m |
-| --- | ---: | ---: | ---: | ---: |
-| Sugar Rush | 1:53 | 2:48 | 3:25 | 100% |
-| Energy | 3:27 | 4:44 | 5:39 | 100% |
-| Toy Capsule | 10:40 | 13:44 | 15:36 | 100% |
-| Luxury | 25:44 | 32:00 | 35:42 | 100% |
-
-Median unique discoveries at 75 minutes: **31**.
+A fresh local/CI run is still required for the current revision.
 
 ## Production documentation persisted
 
 - `FINAL_CHANGELOG.md`
 - `REFERENCE_NOTES.md`
 - `ASSET_CREDITS.md`
-- `VISUAL_ASSET_AUDIT.md` — 60/60 source mappings; all rows still require Studio visual QA
+- `VISUAL_ASSET_AUDIT.md`
 - `MODEL_QA.md`
 - `ECONOMY_AUDIT.md`
 - `PERFORMANCE_AUDIT.md`
@@ -86,12 +132,21 @@ Median unique discoveries at 75 minutes: **31**.
 - `PLAY_IN_STUDIO.md`
 - `LOOP_AUDIT.md`
 
-`ASSET_CREDITS.md` preserves the 40 manifest IDs and leaves unverified Creator Store creator/title metadata pending instead of inventing it. `STUDIO_VISUAL_QA.md` deliberately marks all in-engine checks NOT RUN.
+`ASSET_CREDITS.md` preserves manifest IDs while leaving unverified Creator Store creator/title metadata pending instead of inventing it. `STUDIO_VISUAL_QA.md` must continue to mark in-engine checks NOT RUN until they actually occur.
 
 ## Remaining blockers before final package
 
-The branch is **not** visually release-certified. The next highest-impact unfinished requirement is the vending-machine/world art pass: the current `WorldBuilder` still treats the vending donor too much like the finished shell and relies mainly on recoloring/studs/highlight/billboard. It still needs a real kitbash layer with custom fascia, glass/product rows matching each loot family, control column/keypad/card reader, tray/access panel/vents/feet/marquee and stronger neighborhood dressing before the machine work should be considered master-prompt complete.
+The source is materially closer to the master prompt, but it is **not visually release-certified**.
 
-Roblox Studio/Luau runtime execution is also still required for Creator Store donor appearance/pivots/permissions, collisions/tray alignment, VFX readability, audio permissions/mix, mobile/gamepad layout on real emulation/devices, low-end performance profiling, published DataStore/MemoryStore/MessagingService behavior and two-player trade/disconnect reconciliation.
+Highest remaining gates:
 
-Final ZIP packaging must wait until those source and Studio gates are actually executed; do not label the current branch visually release-ready yet.
+1. Roblox Studio visual QA of all six runtime-kitbashed vending machines: donor orientation, fascia alignment, glass/product clipping, tray/drop-spawn placement, collision hulls and pivots.
+2. Studio visual QA of all 60 item donors in collection/reveal/showcase contexts; replace mismatched donors rather than accepting them because an ID loads.
+3. Further world art dressing. The six-district composition and donor facades exist, but paths/pads/sign anchors are still intentionally simple structural geometry and should be visually assessed against the master prompt's commercial-district bar.
+4. Audio asset permissions/mix and reveal timing in a published experience.
+5. Mobile/tablet/gamepad safe-area and focus QA on actual Studio emulation/devices.
+6. Low-end performance profiling with 100+ inventory items, multiple players, effects and showcases.
+7. Published DataStore/MemoryStore/MessagingService behavior and two-player trade/disconnect reconciliation.
+8. Fresh execution of `static_check.py`, `presentation_check.py` and `economy_sim.py` on the exact current branch.
+
+Do not package or label `shake-vending-game-ULTIMATE.zip` as final until these gates are honestly cleared, or until a package is explicitly requested as a test build rather than a release-certified build.
