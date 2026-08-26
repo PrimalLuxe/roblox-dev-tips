@@ -1,29 +1,8 @@
--- Curated FREE Creator Store assets. These are loaded with AssetService:LoadAssetAsync,
--- sandboxed, stripped of scripts/tools/remotes, then cloned and restyled by our own systems.
--- The game never executes code from a Creator Store model.
+-- Curated FREE Creator Store assets used only for collectible/item visuals.
+-- Downtown architecture, vending machines, kiosks, street furniture, showcase podiums, and runtime UI
+-- are hand-authored in source and do not depend on full Creator Store models.
+-- Every imported item donor is sandboxed and stripped of scripts/tools/remotes before cloning.
 return {
-    VendingMachine = { Id=1924472602, LoadPhase="Critical", Role="Machine", AutoLoad=true, Note="Verified scriptless vending-machine build" },
-    VendingMachineDetailed = { Id=123896408090626, LoadPhase="Critical", Role="Machine", AutoLoad=true, Note="Detailed food/drink vending donor; all 29 scripts/tools/audio stripped before use" },
-    VendingMachineStudded = { Id=5854772913, LoadPhase="Warm", Role="Machine", AutoLoad=true, Note="1-stud old Roblox style vending machine; scripts stripped" },
-    VendingMachineModern = { Id=73930515908550, LoadPhase="Warm", Role="Machine", AutoLoad=true, Note="Modern free Bloxy Cola vending donor; compact mesh" },
-    HubShop = { Id=140650365354389, LoadPhase="Critical", Role="World", AutoLoad=true, Note="FREE Grow a Garden Shop v2" },
-    CollectionShop = { Id=110652161904837, LoadPhase="Warm", Role="World", AutoLoad=true, Note="Grow a Garden cosmetics/crafting shop used as collection-gallery donor" },
-    GardenPlot = { Id=132198808290621, LoadPhase="Warm", Role="World", AutoLoad=true, Note="Highly rated Grow a Garden plot donor for studded hub detailing" },
-    LowPolyShop = { Id=17380100820, LoadPhase="Warm", Role="World", AutoLoad=true, Note="Free low-poly shop" },
-    LowPolyDecor = { Id=16267075451, LoadPhase="Warm", Role="World", AutoLoad=true, Note="Free low-poly asset pack" },
-    PineTree = { Id=183435411, LoadPhase="Warm", Role="World", AutoLoad=true, Note="Highly used free Quenty pine tree" },
-    Podium = { Id=4180574986, LoadPhase="Critical", Role="Podium", AutoLoad=true, Note="Free statue pedestal" },
-    SellATM = { Id=3893560084, LoadPhase="Critical", Role="World", AutoLoad=true, Note="Free Basic ATM" },
-    SimulatorUI = { Id=6177977821, LoadPhase="Critical", Role="UI", AutoLoad=true, Note="UI donor only; runtime theme is authored independently" },
-    ArcadeCabinet = { Id=15940632283, LoadPhase="Warm", Role="World", AutoLoad=true, Note="Free scriptless arcade environment donor" },
-    StreetBench = { Id=342263157, LoadPhase="Warm", Role="World", AutoLoad=true, Note="Free rated bench donor for Downtown street furniture" },
-    StreetLamp = { Id=5131224078, LoadPhase="Warm", Role="World", AutoLoad=true, Note="Free compact street-light donor" },
-    TrashCan = { Id=4860243220, LoadPhase="Warm", Role="World", AutoLoad=true, Note="Free rated compact trash-can donor" },
-    CornerStoreBuilding = { Id=15211466651, LoadPhase="Warm", Role="World", AutoLoad=true, Note="Le Convenience Store donor for Corner Store district; sanitized then augmented" },
-    CandyWorldPack = { Id=8978255600, LoadPhase="Warm", Role="World", AutoLoad=true, Note="Candy Pack environmental donor for Sugar Rush; sanitized then combined with authored candy street identity" },
-    EnergyGym = { Id=18428918873, LoadPhase="Warm", Role="World", AutoLoad=true, Note="Compact Gym donor for Energy district; sanitized then augmented" },
-    LuxuryShop = { Id=5173637034, LoadPhase="Warm", Role="World", AutoLoad=true, Note="Shop donor for Luxury district; sanitized then augmented" },
-    ServiceWarehouse = { Id=10694469551, LoadPhase="Warm", Role="World", AutoLoad=true, Note="Compact Warehouse donor for Unknown/service district; sanitized then augmented" },
     SodaCan = { Id=18238736152, LoadPhase="Critical", Role="Item", AutoLoad=true },
     SodaCanMesh = { Id=11962184173, LoadPhase="Background", Role="Item", AutoLoad=true },
     BloxyColaMesh = { Id=8761745867, LoadPhase="Background", Role="Item", AutoLoad=true },
