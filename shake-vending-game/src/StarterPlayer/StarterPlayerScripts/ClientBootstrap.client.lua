@@ -1,15 +1,20 @@
 local ReplicatedStorage=game:GetService("ReplicatedStorage")
 local RemoteNames=require(ReplicatedStorage.Shared.RemoteNames)
 local remotesFolder=ReplicatedStorage:WaitForChild("Remotes",20)
-if not remotesFolder then error("[ShakeVM] Server did not create ReplicatedStorage.Remotes. Check the FIRST server error in Output.")end
-local events={};for key,name in pairs(RemoteNames.Events)do events[key]=remotesFolder:WaitForChild(name)end
-local functions={};for key,name in pairs(RemoteNames.Functions)do functions[key]=remotesFolder:WaitForChild(name)end
+if not remotesFolder then error("[ShakeVM] Server did not create ReplicatedStorage.Remotes. Check the FIRST server error in Output.") end
+local function requireRemote(className,name)
+    local obj=remotesFolder:WaitForChild(name,12)
+    if not obj or not obj:IsA(className) then error(string.format("[ShakeVM] Missing %s %s",className,name)) end
+    return obj
+end
+local events={};for key,name in pairs(RemoteNames.Events)do events[key]=requireRemote("RemoteEvent",name)end
+local functions={};for key,name in pairs(RemoteNames.Functions)do functions[key]=requireRemote("RemoteFunction",name)end
 local Controllers=script.Parent:WaitForChild("Controllers")
-local UI=require(Controllers.UIController);local Drop=require(Controllers.DropVisualController);local Machine=require(Controllers.MachineController);local Trade=require(Controllers.TradeController);local Inspect=require(Controllers.InspectController)
-
+local UI=require(Controllers.UIController);local Drop=require(Controllers.DropVisualController);local Machine=require(Controllers.MachineController);local Trade=require(Controllers.TradeController);local Inspect=require(Controllers.InspectController);local Audio=require(Controllers.AudioController);local Onboarding=require(Controllers.OnboardingController);local Showcase=require(Controllers.ShowcaseController)
+Audio:Init();UI.Audio=Audio
 UI:Build(events,functions)
-Drop:Init(events);UI.OnSettingsChanged=function(settings)Drop:SetSettings(settings)end
+Drop.Audio=Audio;Drop:Init(events);UI.OnSettingsChanged=function(settings)Audio:SetSettings(settings);Drop:SetSettings(settings)end
 if UI.Snapshot and UI.Snapshot.Profile then UI:ApplyProfileSettings(UI.Snapshot.Profile) end
-Machine:Init(events);UI.OnSnapshotChanged=function(snapshot)Machine:SetSnapshot(snapshot)end;Machine:SetSnapshot(UI.Snapshot)
-Trade:Init(events,UI);Inspect:Init(functions,UI,Drop)
-print("[ShakeVM] Client ready — Creator asset overhaul")
+Machine.Audio=Audio;Machine:Init(events);Showcase:Init();UI.OnSnapshotChanged=function(snapshot)Machine:SetSnapshot(snapshot)end;Machine:SetSnapshot(UI.Snapshot)
+Trade:Init(events,UI);Inspect:Init(functions,UI,Drop);Onboarding:Init(events,UI)
+print("[ShakeVM] Client ready — production systems initialized")
