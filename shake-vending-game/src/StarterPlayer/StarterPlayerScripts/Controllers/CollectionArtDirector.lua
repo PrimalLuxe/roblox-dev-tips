@@ -7,6 +7,9 @@ local Theme=require(ReplicatedStorage.Shared.UITheme).Get()
 local UIComponents=require(script.Parent.UIComponents)
 
 local CollectionArtDirector={}
+local CELL_SIZE=Vector2.new(166,208)
+local CELL_PADDING=Vector2.new(12,12)
+local OVERSCAN_ROWS=1
 
 local function label(parent,value,pos,size,color,font,textSize)
     local t=Instance.new("TextLabel");t.BackgroundTransparency=1;t.Position=pos;t.Size=size;t.Text=value;t.TextColor3=color or Theme.Text;t.Font=font or Enum.Font.GothamBold;t.TextSize=textSize or 10;t.TextXAlignment=Enum.TextXAlignment.Left;t.Parent=parent;return t
@@ -39,10 +42,10 @@ local function sortRows(ui,rows)
     end)
 end
 
-local function renderCard(ui,profile,it)
-    local def=Items[it.BaseItemId];if not def then return end
+local function renderCard(ui,profile,it,parent)
+    local def=Items[it.BaseItemId];if not def then return nil end
     local rarity=Rarities.Get(it.Rarity);local discovered=it.Discovered~=false
-    local card=Instance.new("TextButton");card.Name="ItemCard_"..it.BaseItemId;card.Text="";card.AutoButtonColor=false;card.BackgroundColor3=Theme.Panel2;card.BorderSizePixel=0;card.Parent=ui.CollectionList;UIComponents.PixelBorder(card,Theme.Outline,3,6)
+    local card=Instance.new("TextButton");card.Name="ItemCard_"..it.BaseItemId;card.Text="";card.AutoButtonColor=false;card.Size=UDim2.fromScale(1,1);card.BackgroundColor3=Theme.Panel2;card.BorderSizePixel=0;card.Parent=parent;UIComponents.PixelBorder(card,Theme.Outline,3,6)
     local shadow=Instance.new("Frame");shadow.Name="PixelDepth";shadow.Position=UDim2.fromOffset(5,5);shadow.Size=UDim2.new(1,0,1,0);shadow.BackgroundColor3=Theme.Shadow;shadow.BackgroundTransparency=.26;shadow.BorderSizePixel=0;shadow.ZIndex=-1;shadow.Parent=card
     local rarityBand=Instance.new("Frame");rarityBand.Size=UDim2.new(1,-10,0,7);rarityBand.Position=UDim2.fromOffset(5,5);rarityBand.BackgroundColor3=rarity.Color;rarityBand.BorderSizePixel=0;rarityBand.Parent=card
     local notch=Instance.new("Frame");notch.Size=UDim2.fromOffset(14,7);notch.Position=UDim2.new(1,-19,0,5);notch.BackgroundColor3=Theme.Accent2;notch.BorderSizePixel=0;notch.Parent=card
@@ -77,6 +80,77 @@ local function renderCard(ui,profile,it)
         if it.Catalog then ui.Events.HuntAction:FireServer(it.BaseItemId,true);task.delay(.18,function()ui:Fetch();ui:RenderCollection()end)
         else ui:ShowItem(it)end
     end)
+    return card
+end
+
+local function getColumnCount(list)
+    local width=list.AbsoluteSize.X
+    if width<=0 then return 1 end
+    return math.max(1,math.floor((width+CELL_PADDING.X)/(CELL_SIZE.X+CELL_PADDING.X)))
+end
+
+local function mountVisible(ui)
+    local state=ui.CollectionVirtualState
+    if not state or state.Generation~=ui.CollectionRenderGeneration then return end
+    local list=ui.CollectionList
+    local columns=getColumnCount(list)
+    local stride=CELL_SIZE.Y+CELL_PADDING.Y
+    local top=math.max(0,list.CanvasPosition.Y)
+    local height=math.max(CELL_SIZE.Y,list.AbsoluteSize.Y)
+    local firstRow=math.max(0,math.floor(top/stride)-OVERSCAN_ROWS)
+    local lastRow=math.ceil((top+height)/stride)+OVERSCAN_ROWS
+    local firstIndex=firstRow*columns+1
+    local lastIndex=math.min(#state.Rows,(lastRow+1)*columns)
+    for index,slot in ipairs(state.Slots)do
+        local shouldMount=index>=firstIndex and index<=lastIndex
+        local card=slot:FindFirstChild("MountedCard")
+        if shouldMount and not card then
+            local mounted=renderCard(ui,state.Profile,state.Rows[index],slot)
+            if mounted then mounted.Name="MountedCard" end
+        elseif not shouldMount and card then
+            card:Destroy()
+        end
+    end
+    state.FirstVisible=firstIndex
+    state.LastVisible=lastIndex
+end
+
+local function scheduleMount(ui)
+    local state=ui.CollectionVirtualState
+    if not state or state.MountQueued then return end
+    state.MountQueued=true
+    task.defer(function()
+        local current=ui.CollectionVirtualState
+        if current~=state then return end
+        current.MountQueued=false
+        mountVisible(ui)
+    end)
+end
+
+local function buildVirtualSlots(ui,profile,rows)
+    ui.CollectionRenderGeneration=(ui.CollectionRenderGeneration or 0)+1
+    local generation=ui.CollectionRenderGeneration
+    clear(ui.CollectionList)
+    local slots=table.create(#rows)
+    for index=1,#rows do
+        local slot=Instance.new("Frame")
+        slot.Name="VirtualSlot"
+        slot.BackgroundTransparency=1
+        slot.BorderSizePixel=0
+        slot.LayoutOrder=index
+        slot.Size=UDim2.fromOffset(CELL_SIZE.X,CELL_SIZE.Y)
+        slot.Parent=ui.CollectionList
+        slots[index]=slot
+    end
+    ui.CollectionVirtualState={Rows=rows,Slots=slots,Profile=profile,Generation=generation,MountQueued=false,FirstVisible=0,LastVisible=0}
+    ui.CollectionList.AutomaticCanvasSize=Enum.AutomaticSize.Y
+    if not ui.CollectionVirtualConnections then
+        ui.CollectionVirtualConnections={
+            ui.CollectionList:GetPropertyChangedSignal("CanvasPosition"):Connect(function()scheduleMount(ui)end),
+            ui.CollectionList:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()scheduleMount(ui)end),
+        }
+    end
+    scheduleMount(ui)
 end
 
 local function addSortBar(ui)
@@ -90,7 +164,7 @@ local function addSortBar(ui)
     end
     for _,d in ipairs(ui.CollectionPanel:GetChildren())do if d:IsA("TextButton")and(d.Text=="SELL COMMONS"or d.Text=="SELL DUPES"or d.Text=="SELL SAFE")then d.Parent.Position=UDim2.new(d.Parent.Position.X.Scale,d.Parent.Position.X.Offset,0,141)end end
     ui.CollectionList.Position=UDim2.fromOffset(18,184);ui.CollectionList.Size=UDim2.new(1,-36,1,-204)
-    local grid=ui.CollectionList:FindFirstChildOfClass("UIGridLayout");if grid then grid.CellSize=UDim2.fromOffset(166,208);grid.CellPadding=UDim2.fromOffset(12,12)end
+    local grid=ui.CollectionList:FindFirstChildOfClass("UIGridLayout");if grid then grid.CellSize=UDim2.fromOffset(CELL_SIZE.X,CELL_SIZE.Y);grid.CellPadding=UDim2.fromOffset(CELL_PADDING.X,CELL_PADDING.Y);grid.SortOrder=Enum.SortOrder.LayoutOrder end
 end
 
 function CollectionArtDirector:Apply(ui)
@@ -98,13 +172,13 @@ function CollectionArtDirector:Apply(ui)
     ui.CollectionPanel:SetAttribute("PixelCollectionDirected",true);addSortBar(ui)
     ui.RenderCollection=function(self)
         local profile=self.Snapshot and self.Snapshot.Profile;if not profile then return end
-        clear(self.CollectionList);local q=(self.SearchBox.Text or""):lower();local rows={}
+        local q=(self.SearchBox.Text or""):lower();local rows={}
         if self.CollectionMode=="Catalog"then
             for id,d in pairs(Items)do if type(d)=="table"and d.Id and(q==""or d.Name:lower():find(q,1,true))then table.insert(rows,{BaseItemId=id,MutationId="None",Rarity=d.Rarity,OneIn=d.BaseOneIn or 1,Value=d.BaseValue or 0,Catalog=true,Discovered=profile.BaseCollection[id]==true})end end
         else
             for _,it in ipairs(profile.Inventory or{})do local d=Items[it.BaseItemId];local hay=((d and d.Name or it.BaseItemId).." "..tostring(it.Rarity).." "..tostring(it.MutationId).." "..tostring(it.ObtainedMachine or"")):lower();if q==""or hay:find(q,1,true)then table.insert(rows,it)end end
         end
-        sortRows(self,rows);self.CollectionCount.Text=string.format("%d SHOWN  •  %s",#rows,string.upper(self.Filters.Sort));for _,it in ipairs(rows)do renderCard(self,profile,it)end
+        sortRows(self,rows);self.CollectionCount.Text=string.format("%d SHOWN  •  %s",#rows,string.upper(self.Filters.Sort));buildVirtualSlots(self,profile,rows)
     end
 end
 return CollectionArtDirector

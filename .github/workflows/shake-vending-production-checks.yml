@@ -42,5 +42,7 @@ jobs:
         run: python tools/audio_quality_check.py
       - name: Mobile and accessibility audit
         run: python tools/mobile_accessibility_check.py
+      - name: Performance architecture audit
+        run: python tools/performance_check.py
       - name: Economy and progression loop simulation
         run: python tools/loop_sim.py
