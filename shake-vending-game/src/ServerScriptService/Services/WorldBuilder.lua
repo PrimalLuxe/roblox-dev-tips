@@ -4,6 +4,7 @@ local Lighting = game:GetService("Lighting")
 
 local Machines = require(ReplicatedStorage.Shared.MachineDefinitions)
 local Config = require(ReplicatedStorage.Shared.Config)
+local MachineArtDirector = require(script.Parent.MachineArtDirector)
 
 local WorldBuilder = {}
 
@@ -111,17 +112,19 @@ local function makeMachine(machineId,def,position,yaw)
     local model=Instance.new("Model");model.Name=machineId;model:SetAttribute("MachineId",machineId);model:SetAttribute("UnlockCost",def.UnlockCost);model:SetAttribute("WorldId",def.WorldId or "Downtown");model:SetAttribute("EventOnly",def.EventOnly==true);model.Parent=Workspace.Machines
     local shell=ensureModel(src:Clone());shell.Name="Shell";shell.Parent=model;sanitizeClone(shell,false);scaleLongest(shell,9.3);restyleMachine(shell,def);placeOnGround(shell,position,yaw or 0)
 
+    -- The Creator Store donor is a structural chassis, not finished art. The authored layer adds
+    -- machine-family fascia, real glass/product rows, controls, tray, vents, feet and marquee.
+    -- Apply before measuring bounds/drop placement so collision and reveal positions include it.
+    local artOk,artErr=pcall(function() MachineArtDirector.Apply(model,shell,machineId) end)
+    if not artOk then warn(string.format("[ShakeVM] Machine art failed for %s: %s",machineId,tostring(artErr))) end
+
     local cf,size=shell:GetBoundingBox()
     local root=Instance.new("Part");root.Name="Root";root.Size=Vector3.new(math.max(5,size.X),math.max(8,size.Y),math.max(3,size.Z));root.CFrame=cf;root.Transparency=1;root.Anchored=true;root.CanCollide=false;root.CanTouch=false;root.CanQuery=false;root.Parent=model;model.PrimaryPart=root
-    -- Donor models often contain many internal product parts. Keep those non-collidable and use
-    -- one predictable collision hull so players never snag on invisible/free-model internals.
     local collision=Instance.new("Part");collision.Name="CollisionHull";collision.Size=Vector3.new(math.max(3.5,size.X*0.88),math.max(6,size.Y*0.96),math.max(1.8,size.Z*0.72));collision.CFrame=cf;collision.Transparency=1;collision.Anchored=true;collision.CanCollide=true;collision.CanTouch=false;collision.CanQuery=false;collision.Parent=model
 
     local tray=findTray(shell)
     local dropSpawn=Instance.new("Part");dropSpawn.Name="DropSpawn";dropSpawn.Size=Vector3.new(0.25,0.25,0.25);dropSpawn.Transparency=1;dropSpawn.Anchored=true;dropSpawn.CanCollide=false;dropSpawn.CanQuery=false;dropSpawn.CanTouch=false
     if tray then
-        -- Use the donor model's real dispenser/tray when it has one. Position the reveal just
-        -- above the tray instead of assuming which local axis the original creator called "front".
         dropSpawn.CFrame=CFrame.new(tray.Position+Vector3.new(0,math.max(0.55,tray.Size.Y*0.5+0.42),0))
     else
         dropSpawn.CFrame=CFrame.new(cf.Position+Vector3.new(0,-size.Y*0.28,-size.Z*0.57))
@@ -132,15 +135,10 @@ local function makeMachine(machineId,def,position,yaw)
 
     local req=def.UnlockRequirements or {}
     local subtitle
-    if def.EventOnly then
-        subtitle="EVENT HUNT • BLACKOUT / MYSTERY"
-    elseif def.UnlockCost==0 then
-        subtitle="FREE • SHAKE NOW"
-    elseif req.Discoveries then
-        subtitle=string.format("LOCKED • %d CATALOG • $%s",req.Discoveries,tostring(def.UnlockCost))
-    else
-        subtitle="UNLOCK  $"..tostring(def.UnlockCost)
-    end
+    if def.EventOnly then subtitle="EVENT HUNT • BLACKOUT / MYSTERY"
+    elseif def.UnlockCost==0 then subtitle="FREE • SHAKE NOW"
+    elseif req.Discoveries then subtitle=string.format("LOCKED • %d CATALOG • $%s",req.Discoveries,tostring(def.UnlockCost))
+    else subtitle="UNLOCK  $"..tostring(def.UnlockCost) end
     billboard(root,def.DisplayName:upper(),subtitle,def.Accent)
     return model
 end
@@ -173,9 +171,6 @@ function WorldBuilder:Init()
         return
     end
 
-    -- Compact commercial district: donor buildings create the visible architecture; generated
-    -- geometry is limited to paths/studded trim/signage/collision so the hub never becomes an
-    -- AI-looking field of primitive buildings.
     studPart(hub,"Grass",Vector3.new(96,1,86),CFrame.new(0,-0.5,-7),Color3.fromRGB(66,198,88))
     studPart(hub,"CentralPlaza",Vector3.new(36,0.65,30),CFrame.new(0,0.08,-6),Color3.fromRGB(232,226,205))
     studPart(hub,"NorthWalk",Vector3.new(18,0.5,25),CFrame.new(0,0.12,14),Color3.fromRGB(207,216,224))
@@ -203,7 +198,6 @@ function WorldBuilder:Init()
         makeMachine(d.Id,def,d.Machine,d.Yaw)
     end
 
-    -- Donor landscaping frames the loop without blocking the immediate spawn sightline.
     for i,pos in ipairs({Vector3.new(-43,0,5),Vector3.new(43,0,5),Vector3.new(-43,0,-13),Vector3.new(43,0,-13),Vector3.new(-16,0,-43),Vector3.new(16,0,-43)}) do
         local tree=cloneWorldAsset("PineTree",7.5,pos,(i*31)%360);if tree then tree.Name="CreatorTree"..i end
     end
@@ -228,7 +222,6 @@ function WorldBuilder:Init()
     local galleryAnchor=Instance.new("Part");galleryAnchor.Name="GalleryAnchor";galleryAnchor.Size=Vector3.one;galleryAnchor.CFrame=CFrame.new(0,6,-38);galleryAnchor.Transparency=1;galleryAnchor.Anchored=true;galleryAnchor.CanCollide=false;galleryAnchor.Parent=hub
     billboard(galleryAnchor,"COLLECTION GALLERY","PLACE YOUR 6 RAREST DROPS • INSPECT • FLEX",Color3.fromRGB(255,207,76)).StudsOffset=Vector3.new(0,0,0)
 
-    -- Global board uses a studded frame but is content, not a fake prop/item model.
     local board=studPart(hub,"GlobalBoard",Vector3.new(20,9,0.6),CFrame.new(0,5.2,24),Color3.fromRGB(35,40,52))
     local boardGui=Instance.new("SurfaceGui");boardGui.Name="BoardGui";boardGui.Face=Enum.NormalId.Front;boardGui.SizingMode=Enum.SurfaceGuiSizingMode.PixelsPerStud;boardGui.PixelsPerStud=36;boardGui.Parent=board
     local boardLabel=Instance.new("TextLabel");boardLabel.Name="BoardLabel";boardLabel.Size=UDim2.fromScale(1,1);boardLabel.BackgroundColor3=Color3.fromRGB(26,30,39);boardLabel.TextColor3=Color3.new(1,1,1);boardLabel.Text="TOP RAREST THIS HOUR\nLoading...";boardLabel.Font=Enum.Font.GothamBold;boardLabel.TextSize=25;boardLabel.TextWrapped=true;boardLabel.TextYAlignment=Enum.TextYAlignment.Top;boardLabel.Parent=boardGui
