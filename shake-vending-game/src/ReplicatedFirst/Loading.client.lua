@@ -21,208 +21,174 @@ gui.Parent = player:WaitForChild("PlayerGui")
 
 local root = Instance.new("Frame")
 root.Size = UDim2.fromScale(1,1)
-root.BackgroundColor3 = Color3.fromRGB(9,11,15)
+root.BackgroundColor3 = Color3.fromRGB(8,11,16)
 root.BorderSizePixel = 0
 root.Parent = gui
 
-local grain = Instance.new("Frame")
-grain.Size = UDim2.fromScale(1,1)
-grain.BackgroundColor3 = Color3.fromRGB(255,255,255)
-grain.BackgroundTransparency = 0.985
-grain.BorderSizePixel = 0
-grain.Parent = root
+local vignette = Instance.new("UIGradient")
+vignette.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(8,11,16)),
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(17,23,31)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(8,11,16)),
+})
+vignette.Rotation = 90
+vignette.Parent = root
 
-local wordmark = Instance.new("Frame")
+-- One deterministic wordmark replaces the previous per-letter layout, which visibly scrambled the studio name in Studio.
+local wordmark = Instance.new("TextLabel")
 wordmark.AnchorPoint = Vector2.new(0.5,0.5)
-wordmark.Position = UDim2.fromScale(0.5,0.45)
-wordmark.Size = UDim2.fromOffset(760,160)
+wordmark.Position = UDim2.fromScale(0.5,0.44)
+wordmark.Size = UDim2.new(0.82,0,0,92)
 wordmark.BackgroundTransparency = 1
+wordmark.Text = "OLYMPUS ENTERTAINMENT"
+wordmark.TextColor3 = Color3.fromRGB(246,248,251)
+wordmark.Font = Enum.Font.GothamBlack
+wordmark.TextScaled = true
+wordmark.TextTransparency = 1
+wordmark.TextStrokeTransparency = 1
 wordmark.Parent = root
+local wordConstraint = Instance.new("UITextSizeConstraint")
+wordConstraint.MinTextSize = 24
+wordConstraint.MaxTextSize = 54
+wordConstraint.Parent = wordmark
+local wordScale = Instance.new("UIScale")
+wordScale.Scale = 0.92
+wordScale.Parent = wordmark
 
-local titleLayout = Instance.new("UIListLayout")
-titleLayout.FillDirection = Enum.FillDirection.Horizontal
-titleLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-titleLayout.VerticalAlignment = Enum.VerticalAlignment.Center
-titleLayout.Padding = UDim.new(0,2)
-titleLayout.Parent = wordmark
+local studio = Instance.new("TextLabel")
+studio.AnchorPoint = Vector2.new(0.5,0)
+studio.Position = UDim2.new(0.5,0,0.44,49)
+studio.Size = UDim2.fromOffset(260,24)
+studio.BackgroundTransparency = 1
+studio.Text = "PRESENTS"
+studio.TextColor3 = Color3.fromRGB(224,181,66)
+studio.Font = Enum.Font.GothamBold
+studio.TextSize = 12
+studio.TextTransparency = 1
+studio.TextXAlignment = Enum.TextXAlignment.Center
+studio.Parent = root
 
-local letters = {}
-local function makeLetter(char, index)
-    local l = Instance.new("TextLabel")
-    l.Name = "L"..index
-    l.Size = UDim2.fromOffset(char == " " and 16 or 48, 78)
-    l.BackgroundTransparency = 1
-    l.Text = char
-    l.TextColor3 = Color3.fromRGB(247,249,252)
-    l.TextStrokeColor3 = Color3.fromRGB(16,20,28)
-    l.TextStrokeTransparency = 0.45
-    l.Font = Enum.Font.GothamBlack
-    l.TextSize = 51
-    l.TextTransparency = 1
-    l.Rotation = ((index % 3) - 1) * 2.2
-    l.Parent = wordmark
-    table.insert(letters,l)
-end
-for i=1,#"OLYMPUS ENTERTAINMENT" do makeLetter(string.sub("OLYMPUS ENTERTAINMENT",i,i),i) end
+local divider = Instance.new("Frame")
+divider.AnchorPoint = Vector2.new(0.5,0.5)
+divider.Position = UDim2.new(0.5,0,0.44,82)
+divider.Size = UDim2.fromOffset(0,2)
+divider.BackgroundColor3 = Color3.fromRGB(224,181,66)
+divider.BorderSizePixel = 0
+divider.Parent = root
 
 local status = Instance.new("TextLabel")
 status.AnchorPoint = Vector2.new(0.5,1)
-status.Position = UDim2.new(0.5,0,1,-42)
-status.Size = UDim2.fromOffset(430,28)
+status.Position = UDim2.new(0.5,0,1,-46)
+status.Size = UDim2.fromOffset(430,24)
 status.BackgroundTransparency = 1
 status.Text = "STARTING SERVER"
-status.TextColor3 = Color3.fromRGB(159,171,190)
+status.TextColor3 = Color3.fromRGB(150,164,181)
 status.Font = Enum.Font.GothamBold
-status.TextSize = 13
+status.TextSize = 12
 status.TextXAlignment = Enum.TextXAlignment.Center
 status.Parent = root
 
 local track = Instance.new("Frame")
 track.AnchorPoint = Vector2.new(0.5,1)
-track.Position = UDim2.new(0.5,0,1,-26)
-track.Size = UDim2.fromOffset(330,5)
-track.BackgroundColor3 = Color3.fromRGB(40,47,59)
+track.Position = UDim2.new(0.5,0,1,-27)
+track.Size = UDim2.fromOffset(340,4)
+track.BackgroundColor3 = Color3.fromRGB(40,48,59)
 track.BorderSizePixel = 0
 track.Parent = root
-local tc = Instance.new("UICorner"); tc.CornerRadius=UDim.new(1,0); tc.Parent=track
+local tc = Instance.new("UICorner");tc.CornerRadius=UDim.new(1,0);tc.Parent=track
 local fill = Instance.new("Frame")
 fill.Size = UDim2.fromScale(0,1)
-fill.BackgroundColor3 = Color3.fromRGB(240,196,67)
+fill.BackgroundColor3 = Color3.fromRGB(224,181,66)
 fill.BorderSizePixel = 0
 fill.Parent = track
-local fc = Instance.new("UICorner"); fc.CornerRadius=UDim.new(1,0); fc.Parent=fill
+local fc = Instance.new("UICorner");fc.CornerRadius=UDim.new(1,0);fc.Parent=fill
 
 local function setProgress(done,total,label)
     local ratio = total > 0 and math.clamp(done/total,0,1) or 0
     TweenService:Create(fill,TweenInfo.new(0.12,Enum.EasingStyle.Quad),{Size=UDim2.fromScale(ratio,1)}):Play()
-    status.Text = string.format("%s • %d%%", label or "LOADING WORLD", math.floor(ratio*100+0.5))
+    status.Text = string.format("%s  %d%%",label or "LOADING WORLD",math.floor(ratio*100+0.5))
 end
 
--- The loading cover appears immediately, but give profile attributes a short chance to replicate
--- before deciding whether a returning player should receive the full studio intro.
 local profileWaitDeadline=os.clock()+2.5
 while player:GetAttribute("ShakeVM_IntroSeen")==nil and os.clock()<profileWaitDeadline do
     status.Text="LOADING PLAYER PROFILE"
     RunService.Heartbeat:Wait()
 end
-local introSeen = player:GetAttribute("ShakeVM_IntroSeen") == true
-local reducedEffects = player:GetAttribute("ShakeVM_ReducedEffects") == true
-for i,l in ipairs(letters) do
-    local delayTime = introSeen and 0.008 or 0.026
-    task.delay((i-1)*delayTime,function()
-        if not l.Parent then return end
-        l.Position = UDim2.fromOffset(0,-18)
-        l.TextTransparency = 0
-        TweenService:Create(l,TweenInfo.new(introSeen and 0.10 or 0.22,Enum.EasingStyle.Back,Enum.EasingDirection.Out),{Position=UDim2.fromOffset(0,0),Rotation=0}):Play()
-    end)
-end
+local introSeen=player:GetAttribute("ShakeVM_IntroSeen")==true
+local reducedEffects=player:GetAttribute("ShakeVM_ReducedEffects")==true
+
+wordmark.TextTransparency=1
+studio.TextTransparency=1
+TweenService:Create(wordmark,TweenInfo.new(introSeen and 0.12 or 0.32,Enum.EasingStyle.Quint,Enum.EasingDirection.Out),{TextTransparency=0}):Play()
+TweenService:Create(wordScale,TweenInfo.new(introSeen and 0.12 or 0.42,Enum.EasingStyle.Quint,Enum.EasingDirection.Out),{Scale=1}):Play()
+TweenService:Create(divider,TweenInfo.new(introSeen and 0.12 or 0.34,Enum.EasingStyle.Quint,Enum.EasingDirection.Out),{Size=UDim2.fromOffset(220,2)}):Play()
+task.delay(introSeen and 0.02 or 0.18,function()
+    if studio.Parent then TweenService:Create(studio,TweenInfo.new(0.22),{TextTransparency=0}):Play() end
+end)
 
 local function collectContentIds()
-    local ids, seen = {}, {}
+    local ids,seen={},{}
     local function add(id)
-        if type(id) ~= "string" or id == "" or seen[id] then return end
-        if not string.find(id,"rbxasset",1,true) and not string.find(id,"http",1,true) then return end
-        seen[id]=true
-        table.insert(ids,id)
+        if type(id)~="string"or id==""or seen[id]then return end
+        if not string.find(id,"rbxasset",1,true)and not string.find(id,"http",1,true)then return end
+        seen[id]=true;table.insert(ids,id)
     end
     local function scan(rootObj)
-        for _,d in ipairs(rootObj:GetDescendants()) do
-            if d:IsA("MeshPart") then add(d.TextureID)
-            elseif d:IsA("Decal") or d:IsA("Texture") then add(d.Texture)
-            elseif d:IsA("ImageLabel") or d:IsA("ImageButton") then add(d.Image)
-            elseif d:IsA("ParticleEmitter") or d:IsA("Beam") or d:IsA("Trail") then add(d.Texture)
-            elseif d:IsA("Sound") then add(d.SoundId)
-            end
-            if #ids >= MAX_PRELOAD then return end
+        for _,d in ipairs(rootObj:GetDescendants())do
+            if d:IsA("MeshPart")then add(d.TextureID)
+            elseif d:IsA("Decal")or d:IsA("Texture")then add(d.Texture)
+            elseif d:IsA("ImageLabel")or d:IsA("ImageButton")then add(d.Image)
+            elseif d:IsA("ParticleEmitter")or d:IsA("Beam")or d:IsA("Trail")then add(d.Texture)
+            elseif d:IsA("Sound")then add(d.SoundId)end
+            if #ids>=MAX_PRELOAD then return end
         end
     end
-    local assets = ReplicatedStorage:FindFirstChild("Assets")
-    if assets then scan(assets) end
-    local hub = workspace:FindFirstChild("ShakeHub")
-    if hub and #ids < MAX_PRELOAD then scan(hub) end
+    local assets=ReplicatedStorage:FindFirstChild("Assets");if assets then scan(assets)end
+    local hub=workspace:FindFirstChild("ShakeHub");if hub and #ids<MAX_PRELOAD then scan(hub)end
     return ids
 end
 
-while os.clock()-STARTED < MAX_WAIT do
-    local characterReady = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-    local serverReady = ReplicatedStorage:GetAttribute("ShakeVM_ServerBootReady") == true
+while os.clock()-STARTED<MAX_WAIT do
+    local characterReady=player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+    local serverReady=ReplicatedStorage:GetAttribute("ShakeVM_ServerBootReady")==true
     if characterReady and serverReady then break end
-    local elapsed = os.clock()-STARTED
-    local warmRatio = math.clamp(elapsed / 10,0,0.35)
-    fill.Size = UDim2.fromScale(warmRatio,1)
-    status.Text = serverReady and "PREPARING PLAYER" or "BUILDING VENDING DISTRICT"
+    local elapsed=os.clock()-STARTED
+    fill.Size=UDim2.fromScale(math.clamp(elapsed/10,0,.35),1)
+    status.Text=serverReady and "PREPARING PLAYER"or"BUILDING DOWNTOWN"
     RunService.Heartbeat:Wait()
 end
 
-local ids = collectContentIds()
-if #ids > 0 then
-    local completed = 0
-    local nextIndex = 1
-    local workers = math.min(6,#ids)
-    for _=1,workers do
+local ids=collectContentIds()
+if #ids>0 then
+    local completed,nextIndex=0,1
+    for _=1,math.min(6,#ids)do
         task.spawn(function()
             while true do
-                local i = nextIndex
-                nextIndex += 1
-                local id = ids[i]
-                if not id then break end
-                pcall(function() ContentProvider:PreloadAsync({id}) end)
-                completed += 1
+                local i=nextIndex;nextIndex+=1;local id=ids[i];if not id then break end
+                pcall(function()ContentProvider:PreloadAsync({id})end);completed+=1
             end
         end)
     end
-    while completed < #ids and os.clock()-STARTED < MAX_WAIT do
-        setProgress(completed,#ids,"LOADING WORLD")
-        RunService.Heartbeat:Wait()
-    end
-    if completed>=#ids then
-        setProgress(completed,#ids,"READY")
-    else
-        setProgress(completed,#ids,"CONTINUING IN BACKGROUND")
-    end
-else
-    setProgress(1,1,"READY")
-end
+    while completed<#ids and os.clock()-STARTED<MAX_WAIT do setProgress(completed,#ids,"LOADING DOWNTOWN");RunService.Heartbeat:Wait()end
+    setProgress(completed,#ids,completed>=#ids and"READY"or"CONTINUING IN BACKGROUND")
+else setProgress(1,1,"READY")end
 
--- Profile data may have arrived while world assets were loading; re-check before the expensive transition.
-introSeen = player:GetAttribute("ShakeVM_IntroSeen") == true
-reducedEffects = player:GetAttribute("ShakeVM_ReducedEffects") == true
-task.wait((introSeen or reducedEffects) and 0.05 or 0.18)
+introSeen=player:GetAttribute("ShakeVM_IntroSeen")==true
+reducedEffects=player:GetAttribute("ShakeVM_ReducedEffects")==true
+task.wait((introSeen or reducedEffects)and .05 or .16)
 
--- Non-AI glass fracture overlay using a curated Creator Store decal.
-local crack = Instance.new("ImageLabel")
-crack.AnchorPoint = Vector2.new(0.5,0.5)
-crack.Position = UDim2.fromScale(0.5,0.5)
-crack.Size = UDim2.fromScale(1.08,1.08)
-crack.BackgroundTransparency = 1
-crack.Image = "rbxassetid://10843220925"
-crack.ImageColor3 = Color3.fromRGB(238,244,255)
-crack.ImageTransparency = (introSeen or reducedEffects) and 1 or 0.20
-crack.ScaleType = Enum.ScaleType.Crop
-crack.Parent = root
-
+local flash=Instance.new("Frame")
+flash.Size=UDim2.fromScale(1,1);flash.BackgroundColor3=Color3.fromRGB(248,246,235);flash.BackgroundTransparency=1;flash.BorderSizePixel=0;flash.Parent=root
 if not introSeen and not reducedEffects then
-    local flash = Instance.new("Frame")
-    flash.Size=UDim2.fromScale(1,1)
-    flash.BackgroundColor3=Color3.new(1,1,1)
-    flash.BackgroundTransparency=1
-    flash.BorderSizePixel=0
-    flash.Parent=root
-    TweenService:Create(flash,TweenInfo.new(0.05),{BackgroundTransparency=0.15}):Play()
-    task.wait(0.055)
-    TweenService:Create(flash,TweenInfo.new(0.18),{BackgroundTransparency=1}):Play()
-    TweenService:Create(crack,TweenInfo.new(0.28,Enum.EasingStyle.Quint,Enum.EasingDirection.Out),{ImageTransparency=1,Size=UDim2.fromScale(1.24,1.24)}):Play()
+    TweenService:Create(flash,TweenInfo.new(.06),{BackgroundTransparency=.18}):Play();task.wait(.065)
 end
-
-TweenService:Create(root,TweenInfo.new((introSeen or reducedEffects) and 0.16 or 0.34,Enum.EasingStyle.Quint,Enum.EasingDirection.In),{BackgroundTransparency=1}):Play()
-for _,d in ipairs(root:GetDescendants()) do
-    if d:IsA("TextLabel") then TweenService:Create(d,TweenInfo.new(0.22),{TextTransparency=1}):Play()
-    elseif d:IsA("Frame") and d ~= root then TweenService:Create(d,TweenInfo.new(0.22),{BackgroundTransparency=1}):Play() end
+TweenService:Create(root,TweenInfo.new((introSeen or reducedEffects)and .16 or .30,Enum.EasingStyle.Quint,Enum.EasingDirection.In),{BackgroundTransparency=1}):Play()
+for _,d in ipairs(root:GetDescendants())do
+    if d:IsA("TextLabel")then TweenService:Create(d,TweenInfo.new(.20),{TextTransparency=1}):Play()
+    elseif d:IsA("Frame")and d~=root then TweenService:Create(d,TweenInfo.new(.20),{BackgroundTransparency=1}):Play()end
 end
+task.wait((introSeen or reducedEffects)and .18 or .32);gui:Destroy()
 
-task.wait((introSeen or reducedEffects) and 0.18 or 0.36)
-gui:Destroy()
-
-local remotes = ReplicatedStorage:FindFirstChild("Remotes")
-local settings = remotes and remotes:FindFirstChild("SettingsAction")
-if settings and settings:IsA("RemoteEvent") and not introSeen then settings:FireServer("intro_seen",true) end
+local remotes=ReplicatedStorage:FindFirstChild("Remotes")
+local settings=remotes and remotes:FindFirstChild("SettingsAction")
+if settings and settings:IsA("RemoteEvent")and not introSeen then settings:FireServer("intro_seen",true)end
