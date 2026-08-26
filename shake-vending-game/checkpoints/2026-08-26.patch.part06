@@ -1,0 +1,23 @@
+toggle(textOn,textOff,y,current,action,apply)
++        local b=button(p,current and textOn or textOff,UDim2.fromOffset(410,42),UDim2.fromOffset(30,y),Theme.Accent)
++        b.MouseButton1Click:Connect(function()local nextValue=not current;apply(nextValue);self:PushSetting(action,nextValue);if self.OnSettingsChanged then self.OnSettingsChanged({EffectQuality=self.EffectQuality,SkipLongReveals=self.SkipLong,ReducedEffects=self.ReducedEffects,ReducedScreenShake=self.ReducedScreenShake,SFXEnabled=self.SFXEnabled})end;task.delay(0.12,function()self:OpenSettings()end)end)
++    end
++    toggle("LONG REVEALS: SKIP","LONG REVEALS: ON",158,self.SkipLong,"skip_long_reveals",function(v)self.SkipLong=v end)
++    toggle("REDUCED EFFECTS: ON","REDUCED EFFECTS: OFF",210,self.ReducedEffects,"reduced_effects",function(v)self.ReducedEffects=v end)
++    toggle("SCREEN SHAKE: REDUCED","SCREEN SHAKE: ON",262,self.ReducedScreenShake,"reduced_screen_shake",function(v)self.ReducedScreenShake=v end)
++    toggle("SFX: ON","SFX: OFF",314,self.SFXEnabled,"sfx_enabled",function(v)self.SFXEnabled=v end)
++    local tradeEnabled=self.Snapshot and self.Snapshot.Profile and self.Snapshot.Profile.TradeSettings.Enabled~=false
++    local trade=button(p,tradeEnabled and"TRADE REQUESTS: ON"or"TRADE REQUESTS: OFF",UDim2.fromOffset(410,42),UDim2.fromOffset(30,366),Theme.Accent)
++    trade.MouseButton1Click:Connect(function()self:PushSetting("trade_enabled",not tradeEnabled);task.delay(0.18,function()self:OpenSettings()end)end)
+ end
+ 
+ function UIController:ShowGlobal(data)
+@@ -428,7 +472,7 @@
+     local fav=button(self.CollectionPanel,"FAVORITES",UDim2.fromOffset(125,34),UDim2.fromOffset(830,151),Color3.fromRGB(255,215,82));fav.MouseButton1Click:Connect(function()self.Filters.Favorites=not self.Filters.Favorites;fav.Text=self.Filters.Favorites and"FAVORITES: ONLY"or"FAVORITES";self:RenderCollection()end)
+     local list=Instance.new("ScrollingFrame");list.Name="List";list.Position=UDim2.fromOffset(20,198);list.Size=UDim2.new(1,-40,1,-218);list.BackgroundTransparency=1;list.BorderSizePixel=0;list.CanvasSize=UDim2.new();list.AutomaticCanvasSize=Enum.AutomaticSize.Y;list.ScrollBarThickness=7;list.ScrollBarImageColor3=Theme.Accent;list.Parent=self.CollectionPanel;self.CollectionList=list;local grid=Instance.new("UIGridLayout");grid.CellSize=UDim2.fromOffset(145,190);grid.CellPadding=UDim2.fromOffset(12,12);grid.Parent=list;local pad=Instance.new("UIPadding");pad.PaddingBottom=UDim.new(0,12);pad.Parent=list
+ 
+-    self.ItemPanel=makeNamed("Item",UDim2.fromOffset(760,580));self.GoalsPanel=makeNamed("Goals",UDim2.fromOffset(650,550));self.UpgradePanel=makeNamed("Upgrades",UDim2.fromOffset(660,540));self.DripPanel=makeNamed("Drip",UDim2.fromOffset(640,610));self.GiftsPanel=makeNamed("Playtime Gifts",UDim2.fromOffset(650,540));self.BoardPanel=makeNamed("Global Finds",UDim2.fromOffset(780,550));self.SettingsPanel=makeNamed("Settings",UDim2.fromOffset(470,360));self.InspectPanel=makeNamed("Player",UDim2.fromOffset(500,390))
++    self.ItemPanel=makeNamed("Item",UDim2.fromOffset(760,580));self.GoalsPanel=makeNamed("Goals",UDim2.fromOffset(650,550));self.UpgradePanel=makeNamed("Upgrades",UDim2.fromOffset(660,540));self.DripPanel=makeNamed("Drip",UDim2.fromOffset(640,610));self.GiftsPanel=makeNamed("Playtime Gifts",UDim2.fromOffset(650,540));self.BoardPanel=makeNamed("Global Finds",UDim2.fromOffset(780,550));self.SettingsPanel=makeNamed("Settings",UDim2.fromOffset(470,440));self.InspectPanel=makeNamed("Player",UDim2.fromOffset(500,390))
+ 
+     remotes.Toast.OnClientEvent:Connect(function(data)self:Toast(data)end);remotes.RareGlobal.OnClientEvent:Connect(function(data)self:ShowGlobal(data)end)
+     remotes.OpenPanel.OnClientEvent:Connect(function(data)
