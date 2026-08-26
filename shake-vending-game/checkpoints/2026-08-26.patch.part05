@@ -1,0 +1,133 @@
+ 
+ 
+ local function addParticles(primary,item,quality)
+-    if quality=="Low" then return end
++    if DropVisualController.ReducedEffects or quality=="Low" then return end
+     local rarity=Rarities.Get(item.Rarity); local mut=Mutations[item.MutationId] or Mutations.None
+     if rarity.ParticleRate<=0 and item.MutationId=="None" then return end
+     local a=Instance.new("Attachment"); a.Name="DropParticles"; a.Parent=primary
+@@ -84,7 +84,7 @@
+ end
+ 
+ local function addOrbit(model,primary,item,quality)
+-    if quality~="High" then return end
++    if DropVisualController.ReducedEffects or quality~="High" then return end
+     local effect=(Mutations[item.MutationId] or Mutations.None).Effect
+     if effect~="Cosmic" and effect~="Heavenly" and effect~="Void" and effect~="Glitch" then return end
+     local color=(Mutations[item.MutationId] and Mutations[item.MutationId].Color) or Rarities.Get(item.Rarity).Color
+@@ -124,7 +124,7 @@
+ end
+ 
+ local function cameraShake(rank)
+-    if rank<6 or DropVisualController.EffectQuality=="Low" then return end
++    if DropVisualController.ReducedEffects or DropVisualController.ReducedScreenShake or rank<6 or DropVisualController.EffectQuality=="Low" then return end
+     local name="ShakeVM_RareCamera";RunService:UnbindFromRenderStep(name)
+     local started=os.clock();local duration=rank>=8 and 0.48 or 0.28;local strength=rank>=9 and 0.16 or (rank>=8 and 0.11 or 0.065)
+     RunService:BindToRenderStep(name,Enum.RenderPriority.Camera.Value+1,function()
+@@ -135,6 +135,7 @@
+ end
+ 
+ local function screenRarityReveal(item)
++    if DropVisualController.ReducedEffects then return end
+     local rarity=Rarities.Get(item.Rarity);if rarity.Rank<7 then return end
+     local def=Items[item.BaseItemId];local pg=player:FindFirstChildOfClass("PlayerGui");if not pg then return end
+     local old=pg:FindFirstChild("ShakeRarityReveal");if old then old:Destroy()end
+@@ -155,7 +156,7 @@
+ end
+ 
+ local function cameraPulse(rank)
+-    if rank<4 then return end
++    if DropVisualController.ReducedEffects or DropVisualController.ReducedScreenShake or rank<4 then return end
+     local old=camera.FieldOfView; local target=old-math.min(7,rank)
+     TweenService:Create(camera,TweenInfo.new(0.12,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),{FieldOfView=target}):Play()
+     task.delay(0.13,function() TweenService:Create(camera,TweenInfo.new(0.28,Enum.EasingStyle.Quad),{FieldOfView=old}):Play() end)
+@@ -183,9 +184,17 @@
+     return target and model and target:IsDescendantOf(model)
+ end
+ 
+-function DropVisualController:SetSettings(quality,skipLong)
+-    self.EffectQuality=quality or self.EffectQuality
+-    self.SkipLong=skipLong==true
++function DropVisualController:SetSettings(settings,legacySkipLong)
++    if type(settings)=="table" then
++        self.EffectQuality=settings.EffectQuality or self.EffectQuality
++        self.SkipLong=settings.SkipLongReveals==true
++        self.ReducedEffects=settings.ReducedEffects==true
++        self.ReducedScreenShake=settings.ReducedScreenShake==true
++        self.SFXEnabled=settings.SFXEnabled~=false
++        return
++    end
++    self.EffectQuality=settings or self.EffectQuality
++    self.SkipLong=legacySkipLong==true
+ end
+ 
+ function DropVisualController:CreateOwn(payload)
+diff -ruN '--exclude=rojo.exe' /mnt/data/shake_vending_orig/shake-vending-game-FINAL/src/StarterPlayer/StarterPlayerScripts/Controllers/UIController.lua /mnt/data/shake_vending_work/shake-vending-game-FINAL/src/StarterPlayer/StarterPlayerScripts/Controllers/UIController.lua
+--- /mnt/data/shake_vending_orig/shake-vending-game-FINAL/src/StarterPlayer/StarterPlayerScripts/Controllers/UIController.lua	2026-08-26 03:19:03.000000000 +0000
++++ /mnt/data/shake_vending_work/shake-vending-game-FINAL/src/StarterPlayer/StarterPlayerScripts/Controllers/UIController.lua	2026-08-26 16:00:12.338537374 +0000
+@@ -13,7 +13,7 @@
+ local Theme=require(ReplicatedStorage.Shared.UITheme).Get()
+ 
+ local UIController={
+-    Snapshot=nil,TradeActive=false,EffectQuality="High",SkipLong=false,ShowcasePickSlot=nil,
++    Snapshot=nil,TradeActive=false,EffectQuality="High",SkipLong=false,ReducedEffects=false,ReducedScreenShake=false,SFXEnabled=true,ShowcasePickSlot=nil,
+     Filters={Category="ALL",Machine="ALL",Rarity="ALL",Mutation="ALL",Wearable=false,Favorites=false},
+ }
+ 
+@@ -95,9 +95,36 @@
+     return vp
+ end
+ 
++function UIController:ApplyProfileSettings(profile)
++    local settings=(profile and profile.Settings) or {}
++    self.EffectQuality=settings.EffectQuality or self.EffectQuality or "High"
++    self.SkipLong=settings.SkipLongReveals==true
++    self.ReducedEffects=settings.ReducedEffects==true
++    self.ReducedScreenShake=settings.ReducedScreenShake==true
++    self.SFXEnabled=settings.SFXEnabled~=false
++    if self.OnSettingsChanged then
++        self.OnSettingsChanged({
++            EffectQuality=self.EffectQuality,
++            SkipLongReveals=self.SkipLong,
++            ReducedEffects=self.ReducedEffects,
++            ReducedScreenShake=self.ReducedScreenShake,
++            SFXEnabled=self.SFXEnabled,
++        })
++    end
++end
++
++function UIController:PushSetting(action,value)
++    self.Events.SettingsAction:FireServer(action,value)
++end
++
+ function UIController:Fetch()
+     local ok,res=pcall(function()return self.Functions.GetSnapshot:InvokeServer()end)
+-    if ok and res then self.Snapshot=res;self.EngagementUpdatedAt=os.clock();if self.OnSnapshotChanged then self.OnSnapshotChanged(res)end end
++    if ok and res then
++        self.Snapshot=res
++        self.EngagementUpdatedAt=os.clock()
++        self:ApplyProfileSettings(res.Profile)
++        if self.OnSnapshotChanged then self.OnSnapshotChanged(res)end
++    end
+     return self.Snapshot
+ end
+ 
+@@ -356,10 +383,27 @@
+ end
+ 
+ function UIController:OpenSettings()
+-    self:Fetch();self:ClosePanels(self.SettingsPanel);local p=self.SettingsPanel;p.Visible=true;clearChildren(p,{Title=true,Close=true});label(p,"EFFECT QUALITY",UDim2.fromOffset(240,30),UDim2.fromOffset(30,78),Enum.Font.GothamBlack,17,Theme.Text);local x=30
+-    for _,q in ipairs({"Low","Medium","High"})do local b=button(p,q,UDim2.fromOffset(110,42),UDim2.fromOffset(x,114),q==self.EffectQuality and Theme.Accent or Theme.Muted);x+=120;b.MouseButton1Click:Connect(function()self.EffectQuality=q;if self.OnSettingsChanged then self.OnSettingsChanged(q,self.SkipLong)end;self:OpenSettings()end)end
+-    local skip=button(p,self.SkipLong and"LONG REVEALS: SKIP"or"LONG REVEALS: ON",UDim2.fromOffset(350,46),UDim2.fromOffset(30,174),Theme.Accent);skip.MouseButton1Click:Connect(function()self.SkipLong=not self.SkipLong;if self.OnSettingsChanged then self.OnSettingsChanged(self.EffectQuality,self.SkipLong)end;self:OpenSettings()end)
+-    local tradeEnabled=self.Snapshot.Profile.TradeSettings.Enabled~=false;local trade=button(p,tradeEnabled and"TRADE REQUESTS: ON"or"TRADE REQUESTS: OFF",UDim2.fromOffset(350,46),UDim2.fromOffset(30,232),Theme.Accent);trade.MouseButton1Click:Connect(function()self.Events.SettingsAction:FireServer("trade_enabled",not tradeEnabled);task.delay(0.2,function()self:OpenSettings()end)end)
++    self:Fetch();self:ClosePanels(self.SettingsPanel)
++    local p=self.SettingsPanel;p.Visible=true;clearChildren(p,{Title=true,Close=true})
++    label(p,"EFFECT QUALITY",UDim2.fromOffset(240,30),UDim2.fromOffset(30,70),Enum.Font.GothamBlack,17,Theme.Text)
++    local x=30
++    for _,q in ipairs({"Low","Medium","High"})do
++        local b=button(p,q,UDim2.fromOffset(110,42),UDim2.fromOffset(x,104),q==self.EffectQuality and Theme.Accent or Theme.Muted);x+=120
++        b.MouseButton1Click:Connect(function()
++            self.EffectQuality=q;self:PushSetting("effect_quality",q);self:ApplyProfileSettings({Settings={EffectQuality=q,SkipLongReveals=self.SkipLong,ReducedEffects=self.ReducedEffects,ReducedScreenShake=self.ReducedScreenShake,SFXEnabled=self.SFXEnabled}});task.delay(0.12,function()self:OpenSettings()end)
++        end)
++    end
++    local function 
