@@ -1,4 +1,5 @@
 local ReplicatedStorage=game:GetService("ReplicatedStorage")
+local GuiService=game:GetService("GuiService")
 local RemoteNames=require(ReplicatedStorage.Shared.RemoteNames)
 local remotesFolder=ReplicatedStorage:WaitForChild("Remotes",20)
 if not remotesFolder then error("[ShakeVM] Server did not create ReplicatedStorage.Remotes. Check the FIRST server error in Output.") end
@@ -9,7 +10,7 @@ local Controllers=script.Parent:WaitForChild("Controllers")
 local UI=require(Controllers.UIController);local Drop=require(Controllers.DropVisualController);local Machine=require(Controllers.MachineController);local Trade=require(Controllers.TradeController);local Inspect=require(Controllers.InspectController);local Audio=require(Controllers.AudioController);local Onboarding=require(Controllers.OnboardingController);local Showcase=require(Controllers.ShowcaseController);local MachineInteraction=require(Controllers.MachineInteractionController);local WorldLoop=require(Controllers.WorldLoopController);local HudArt=require(Controllers.HudArtDirector);local CollectionArt=require(Controllers.CollectionArtDirector);local Accessibility=require(Controllers.AccessibilityController)
 Audio:Init();UI.Audio=Audio
 UI:Build(events,functions);HudArt:Apply(UI);CollectionArt:Apply(UI);Accessibility:Init(UI);Audio:BindGui(UI.Gui)
-Drop.Audio=Audio;Drop:Init(events);UI.OnSettingsChanged=function(settings)Audio:SetSettings(settings);Drop:SetSettings(settings)end
+Drop.Audio=Audio;Drop:Init(events);UI.OnSettingsChanged=function(settings)local effective={};for k,v in pairs(settings or{})do effective[k]=v end;if GuiService.ReducedMotionEnabled then effective.ReducedEffects=true;effective.ReducedScreenShake=true end;Audio:SetSettings(effective);Drop:SetSettings(effective)end
 if UI.Snapshot and UI.Snapshot.Profile then UI:ApplyProfileSettings(UI.Snapshot.Profile)end
 Machine.Audio=Audio;Machine:Init(events);MachineInteraction:Init(events,Audio);Showcase:Init();WorldLoop:Init(events,functions,UI);UI.OnSnapshotChanged=function(snapshot)Machine:SetSnapshot(snapshot);WorldLoop:RefreshHud()end;Machine:SetSnapshot(UI.Snapshot)
 Trade:Init(events,UI);Inspect:Init(functions,UI,Drop);Onboarding:Init(events,UI)
