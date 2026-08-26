@@ -34,5 +34,7 @@ jobs:
           python-version: '3.12'
       - name: Static structural audit
         run: python tools/static_check.py
+      - name: Presentation persistence audit
+        run: python tools/presentation_check.py
       - name: Economy regression simulation
         run: python tools/economy_sim.py
