@@ -1,0 +1,38 @@
+name: Shake Vending Production Checks
+
+on:
+  push:
+    branches: [shake-vending-production]
+    paths:
+      - 'shake-vending-game/**'
+      - '.github/workflows/shake-vending-production-checks.yml'
+  pull_request:
+    paths:
+      - 'shake-vending-game/**'
+      - '.github/workflows/shake-vending-production-checks.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: shake-vending-production-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: shake-vending-game
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Static structural audit
+        run: python tools/static_check.py
+      - name: Economy regression simulation
+        run: python tools/economy_sim.py
