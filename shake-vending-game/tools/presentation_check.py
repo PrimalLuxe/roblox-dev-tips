@@ -18,7 +18,7 @@ def require(rel, *markers):
 
 world = require(
     "ServerScriptService/Services/WorldBuilder.lua",
-    "MachineArtDirector = require(script.Parent.MachineArtDirector)",
+    "MachineArtDirector=require(script.Parent.MachineArtDirector)",
     "MachineArtDirector.Apply(model,shell,machineId)",
     "VendingMachineDetailed",
     "DropSpawn",
