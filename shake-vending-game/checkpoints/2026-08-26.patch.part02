@@ -1,0 +1,116 @@
+Load=true, Note="Free low-triangle cookie stack donor" },
+-    BunnyPlush = { Id=9067952250, Role="Item", AutoLoad=true, Note="Free bunny plush donor" },
+-    SlimeBlob = { Id=874582924, Role="Item", AutoLoad=true, Note="Free rated slime donor" },
+-    DiceProp = { Id=4995709060, Role="Item", AutoLoad=true, Note="Free compact dice donor" },
+-    CrownProp = { Id=959221624, Role="Item", AutoLoad=true, Note="Free crown mesh donor" },
+-    QuestionMarkProp = { Id=4016842024, Role="Item", AutoLoad=true, Note="Free question-mark prop donor" },
+-    BubbleGumProp = { Id=10831254538, Role="Item", AutoLoad=true, Note="Free premium bubblegum donor" },
+-    GachaMachinePack = { Id=105994898400536, Role="Item", AutoLoad=true, Note="Free gacha/capsule donor; scripts stripped and semantic submodel extraction only" },
++    SodaCan = { Id=18238736152, LoadPhase="Critical", Role="Item", AutoLoad=true },
++    SodaCanMesh = { Id=11962184173, LoadPhase="Background", Role="Item", AutoLoad=true },
++    BloxyColaMesh = { Id=8761745867, LoadPhase="Background", Role="Item", AutoLoad=true },
++    BloxyColaProp = { Id=5238761267, LoadPhase="Background", Role="Item", AutoLoad=true },
++    WaterBottle = { Id=17473392905, LoadPhase="Critical", Role="Item", AutoLoad=true },
++    Bottle = { Id=8752764216, LoadPhase="Background", Role="Item", AutoLoad=true },
++    BottleCustom = { Id=87202443207548, LoadPhase="Background", Role="Item", AutoLoad=true },
++    DrinkBottle = { Id=5127364594, LoadPhase="Background", Role="Item", AutoLoad=true },
++    PotatoChips = { Id=11542524323, LoadPhase="Critical", Role="Item", AutoLoad=true },
++    ChipsPack = { Id=15343999257, LoadPhase="Background", Role="Item", AutoLoad=true },
++    Chocolate = { Id=5212600780, LoadPhase="Critical", Role="Item", AutoLoad=true },
++    GummyBears = { Id=5670289254, LoadPhase="Background", Role="Item", AutoLoad=true },
++    Lollipop = { Id=5053108042, LoadPhase="Background", Role="Item", AutoLoad=true },
++    CandyPack = { Id=8800370694, LoadPhase="Background", Role="Item", AutoLoad=true },
++    RobotToy = { Id=982342953, LoadPhase="Critical", Role="Item", AutoLoad=true },
++    RobotToyAlt = { Id=974904281, LoadPhase="Background", Role="Item", AutoLoad=true },
++    TinyRobot = { Id=981959327, LoadPhase="Background", Role="Item", AutoLoad=true },
++    RubberDuck = { Id=112596010768171, LoadPhase="Background", Role="Item", AutoLoad=true },
++    StoreItemsPack = { Id=404157586, LoadPhase="Warm", Role="Item", AutoLoad=true },
++    CookieStack = { Id=934871698, LoadPhase="Background", Role="Item", AutoLoad=true, Note="Free low-triangle cookie stack donor" },
++    BunnyPlush = { Id=9067952250, LoadPhase="Background", Role="Item", AutoLoad=true, Note="Free bunny plush donor" },
++    SlimeBlob = { Id=874582924, LoadPhase="Background", Role="Item", AutoLoad=true, Note="Free rated slime donor" },
++    DiceProp = { Id=4995709060, LoadPhase="Background", Role="Item", AutoLoad=true, Note="Free compact dice donor" },
++    CrownProp = { Id=959221624, LoadPhase="Background", Role="Item", AutoLoad=true, Note="Free crown mesh donor" },
++    QuestionMarkProp = { Id=4016842024, LoadPhase="Background", Role="Item", AutoLoad=true, Note="Free question-mark prop donor" },
++    BubbleGumProp = { Id=10831254538, LoadPhase="Background", Role="Item", AutoLoad=true, Note="Free premium bubblegum donor" },
++    GachaMachinePack = { Id=105994898400536, LoadPhase="Background", Role="Item", AutoLoad=true, Note="Free gacha/capsule donor; scripts stripped and semantic submodel extraction only" },
+ }
+diff -ruN '--exclude=rojo.exe' /mnt/data/shake_vending_orig/shake-vending-game-FINAL/src/ReplicatedStorage/Shared/Config.lua /mnt/data/shake_vending_work/shake-vending-game-FINAL/src/ReplicatedStorage/Shared/Config.lua
+--- /mnt/data/shake_vending_orig/shake-vending-game-FINAL/src/ReplicatedStorage/Shared/Config.lua	2026-08-26 03:17:32.000000000 +0000
++++ /mnt/data/shake_vending_work/shake-vending-game-FINAL/src/ReplicatedStorage/Shared/Config.lua	2026-08-26 15:56:45.814416599 +0000
+@@ -6,6 +6,8 @@
+     -- In Studio enable: Game Settings > Security > Allow Loading Third Party Assets.
+     RequireCreatorStoreAssets = true,
+     AssetLoadTimeoutSeconds = 45,
++    ClientLoadTimeoutSeconds = 28,
++    ClientPreloadBudget = 96,
+ 
+     ProfileStoreName = "ShakeVM_Player_v2",
+     TradeJournalStoreName = "ShakeVM_TradeJournal_v2",
+diff -ruN '--exclude=rojo.exe' /mnt/data/shake_vending_orig/shake-vending-game-FINAL/src/ReplicatedStorage/Shared/ProfileTemplate.lua /mnt/data/shake_vending_work/shake-vending-game-FINAL/src/ReplicatedStorage/Shared/ProfileTemplate.lua
+--- /mnt/data/shake_vending_orig/shake-vending-game-FINAL/src/ReplicatedStorage/Shared/ProfileTemplate.lua	2026-08-26 03:17:32.000000000 +0000
++++ /mnt/data/shake_vending_work/shake-vending-game-FINAL/src/ReplicatedStorage/Shared/ProfileTemplate.lua	2026-08-26 15:56:45.814242405 +0000
+@@ -48,6 +48,15 @@
+     TradeSettings = {
+         Enabled = true,
+     },
++    Settings = {
++        EffectQuality = "High",
++        ReducedEffects = false,
++        ReducedScreenShake = false,
++        SkipLongReveals = false,
++        MusicEnabled = true,
++        SFXEnabled = true,
++        IntroSeen = false,
++    },
+     PendingTrades = {},
+     CompletedTrades = {},
+     CreatedAt = 0,
+diff -ruN '--exclude=rojo.exe' /mnt/data/shake_vending_orig/shake-vending-game-FINAL/src/ServerScriptService/Bootstrap.server.lua /mnt/data/shake_vending_work/shake-vending-game-FINAL/src/ServerScriptService/Bootstrap.server.lua
+--- /mnt/data/shake_vending_orig/shake-vending-game-FINAL/src/ServerScriptService/Bootstrap.server.lua	2026-08-26 03:17:32.000000000 +0000
++++ /mnt/data/shake_vending_work/shake-vending-game-FINAL/src/ServerScriptService/Bootstrap.server.lua	2026-08-26 16:00:12.337420624 +0000
+@@ -4,6 +4,7 @@
+ 
+ -- Remotes exist first so a later startup failure produces a useful client error instead of an infinite yield.
+ local RemoteService=require(Services.RemoteService);RemoteService:Init()
++ReplicatedStorage:SetAttribute("ShakeVM_ServerBootReady", false)
+ local AssetLoadService=require(Services.AssetLoadService)
+ local DataService=require(Services.DataService)
+ local EventService=require(Services.EventService)
+@@ -16,17 +17,20 @@
+ local CosmeticService=require(Services.CosmeticService)
+ local ShowcaseService=require(Services.ShowcaseService)
+ local TradingService=require(Services.TradingService)
++local SettingsService=require(Services.SettingsService)
+ local WorldBuilder=require(Services.WorldBuilder)
+ local UpgradeService=require(Services.UpgradeService)
+ local MachineService=require(Services.MachineService)
+ local WorldInteractionService=require(Services.WorldInteractionService)
+ local Util=require(ReplicatedStorage.Shared.Util)
+ 
++-- Player profiles/settings must begin loading before potentially slow visual asset work.
++-- This lets returning-player comfort/intro settings replicate while the world is still preparing.
++DataService:Init()
++
+ -- Load and sanitize curated free Creator Store models before building the visual world.
+ AssetLoadService:Init()
+ WorldBuilder:Init()
+-
+-DataService:Init()
+ ProgressionService:Init(DataService,RemoteService)
+ EngagementService:Init(RemoteService,DataService)
+ EventService:Init(RemoteService)
+@@ -37,6 +41,7 @@
+ CosmeticService:Init(RemoteService,DataService)
+ ShowcaseService:Init(RemoteService,DataService)
+ TradingService:Init(RemoteService,DataService,CosmeticService,ShowcaseService)
++SettingsService:Init(RemoteService,DataService,TradingService)
+ UpgradeService:Init(RemoteService,DataService)
+ MachineService:Init(RemoteService,DataService,RollService,InventoryService,GlobalService,EventService,ProgressionService,EngagementService)
+ WorldInteractionService:Init(RemoteService,InventoryService)
+@@ -74,4 +79,5 @@
+     end
+ end)
+ 
++ReplicatedStorage:SetAttribute("ShakeVM_ServerBootReady", true)
+ print("[ShakeVM] Booted Creator-asset vending RNG overhaul")
+diff -ruN '--exclude=rojo.exe' 
