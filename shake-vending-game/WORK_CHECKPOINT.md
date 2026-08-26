@@ -7,164 +7,120 @@
 - Folder: `shake-vending-game`
 - Source of truth: latest uploaded **Shake a Vending Machine — Front-Page Production Overhaul Master Prompt**.
 
-## Runtime persistence status
+This run began by inspecting branch head `b19fd73d3964bd3c37420cd52b7d20bfcc71705c` rather than assuming the prior chat summary was current.
 
-The release-critical Rojo text source is persisted on the production branch. Client bootstrap resolves UI, reveal, machine, trade, inspection, audio, onboarding, showcase, world-loop, HUD art and collection-art controllers from source. Server bootstrap resolves the production data/progression/roll/inventory/cosmetic/showcase/trading/global/event/upgrade/world services.
+## Stable production systems already persisted
 
-## Implemented production systems
+- 60 launch collectibles, 10 per each of six vending machines.
+- 12 mutation families plus None.
+- Server-authoritative roll/inventory/progression/upgrades/settings/trading.
+- Vending Passport, Hunt List, Lucky Meter, mastery, playtime gifts and multi-goal machine unlocks.
+- Protected selling, favorites, locking, keep-one-each, shards, equipment and showcase references.
+- Six-slot showcase, wearable collectibles, auras/trails/titles/outfits.
+- Journaled two-stage trading with READY reset, countdown/revalidation and interrupted-commit reconciliation.
+- MemoryStore hourly rare board, MessagingService rare feed and timed/global event systems.
+- Centralized token-bucket remote limiting and autosave snapshot-rewind protection.
+- Creator Store donor loading/sanitation with no runtime third-party script execution.
+- Authored HUD/collection art directors wired through `ClientBootstrap.client.lua`.
+- Authored vending fascia (`OlympusKitbash`) wired during primary world construction.
+- Staged physical vending interaction with keypad acknowledgement, constrained rattle, product inertia, suspense, CLUNK and tray kick.
+- Distinct mutation/reveal VFX source language with quality/distance bounds.
 
-- Profile/data progression v5 with Vending Passport and 3-slot Hunt List.
-- Downtown launch world, multi-goal machine unlocks and event-only Unknown machine.
-- Server-authoritative Hunt/Passport, roll, inventory, upgrades, settings and trading actions.
-- Truthful obtained-roll (`OneIn`) and natural-pool (`NaturalOneIn`) odds.
-- Creator Store loading through `AssetService:LoadAssetAsync` with phased startup and donor sanitation.
-- Missing Creator Store item donors warn/omit instead of spawning fake red placeholder geometry.
-- Protected mass selling, auto-lock, keep-one-each, favorites, shards, equipment and showcase references.
-- Responsive HUD/collection UI with catalog search/sort, viewport inspection, sell confirmation, upgrades, global board, settings and gamepad Back.
-- Wearable collectibles, auras, trails, titles, outfit slots, six editable showcase pedestals and rarest-item centerpiece.
-- Journaled two-stage trading with revalidation, capacity checks, READY reset, CONFIRM countdown and interrupted-commit reconciliation.
-- MemoryStore hourly rare board, MessagingService cross-server rare feed, restock events, cooperative Jammed progress, combo state and server-timed playtime gifts.
-- DataStore autosave snapshot-rewind race fixed; centralized token-bucket remote limiting present.
+## Work completed in this run — production audio architecture
 
-## Presentation correction state
+The master prompt identifies sound design/mixing as a major polish gap. This run implemented the highest-impact source-side audio work that can be verified without pretending to listen inside Roblox Studio.
 
-### Original UI identity
+### `SoundManifest.lua`
 
-`UITheme.lua` owns a warm cream/navy/vending-blue/restrained-gold retail palette rather than copying a free simulator donor at runtime. `UIComponents.lua` supplies reusable tactile cards/buttons, physical shadow layers, outlines, hover/press states, gamepad selection and confirmation-modal primitives.
+Expanded from machine + rarity only into categorized definitions for:
 
-`HudArtDirector.lua` and `CollectionArtDirector.lua` are both persisted. `ClientBootstrap.client.lua` explicitly applies both directors after `UI:Build`, so the authored HUD and collection cards/search/sort presentation are wired runtime systems rather than dead source.
+- Machine: hum, button, click, rattle, clunk.
+- UI: hover, click, confirm, error.
+- Economy: coin, sell, purchase, unlock.
+- Collection: collect, discovery, milestone.
+- Engagement: Lucky Meter ready, mastery, gift.
+- Rarity: Rare through Global.
+- Mix metadata: SFX/UI/Ambient/Music/RareReveal group levels and rare-reveal duck attack/hold/release.
 
-### Reveal / mutation language
+No new unverified asset IDs were fabricated. The source deliberately reuses only IDs already persisted in the project until individual free Creator Store sounds can be title/creator/permission verified.
 
-`VFXManifest.lua` defines distinct visual families for all 12 launch mutations. `DropVisualController.lua` consumes those definitions and keeps effects client-side/quality-bounded: rarity rays, high-tier discovery beam, differentiated mutation particles/lights, physical rarity card and high-tier screen treatment. No external VFX texture IDs were fabricated.
+### `AudioController.lua`
 
-### Vending machine art — primary construction integration
+Added:
 
-`MachineArtDirector.lua` provides six machine families using the sanitized Creator Store vending donor as a chassis and adding an authored layer named `OlympusKitbash`:
+- all five master-prompt SoundGroups (`SFX`, `UI`, `Ambient`, `Music`, `RareReveal`);
+- manifest category playback through `PlayCategory`;
+- short per-definition cooldowns;
+- concurrent-instance caps to stop rapid-shake/UI spam;
+- active-instance accounting with cleanup on `Ended`/destroy;
+- positional rolloff for machine cues;
+- machine-hum reuse and cleanup when machines leave the data model;
+- rare-reveal ducking of music/ambience/ordinary SFX with timed restoration;
+- automatic quiet hover/click feedback for existing and dynamically-created GUI buttons;
+- compatibility with persisted Music/SFX settings.
 
-- real glass display bay;
-- three internal shelves;
-- visible products generated from each machine's actual item definitions;
-- display screen;
-- keypad/buttons;
-- card reader and coin slot;
-- dispense tray;
-- lower access panel and vents;
-- feet/base hardware;
-- marquee/top signage;
-- subtle interior light;
-- family-specific fascia/trim details for Corner Store, Sugar Rush, Energy, Toy Capsule, Luxury and Unknown.
+`ClientBootstrap.client.lua` now calls `Audio:BindGui(UI.Gui)` after UI construction, so dynamic modal/buttons inherit feedback without every screen creating custom sound plumbing.
 
-Before this run the art layer was already applied by the secondary `WorldPolishService` pass, so it was not truly orphaned. The weakness was that `WorldBuilder` measured the donor shell and created root/collision/drop placement **before** that secondary art pass. `WorldBuilder.makeMachine` now requires and executes `MachineArtDirector.Apply(model,shell,machineId)` before final bounds, collision-hull and drop-spawn placement. `WorldPolishService` sees `ArtDirectionVersion == 2` and skips duplicate machine construction. This makes the authored fascia part of primary machine construction and keeps bounds/reveal placement deterministic.
+Rare reveal calls already flow through `DropVisualController -> Audio:PlayRarity`, so manifest rarity entries marked `Duck=true` now trigger real group ducking automatically. Machine interaction retains positional Rattle + Clunk cues.
 
-### Physical machine interaction polish
+### Audio QA tooling
 
-`MachineInteractionController.lua` was upgraded from product-only jiggle to a staged, locally visual interaction driven by the authoritative `DropSpawned` event:
+Added `tools/audio_quality_check.py` and wired it into `.github/workflows/shake-vending-production-checks.yml`.
 
-1. keypad acknowledgement and screen change;
-2. slight forward compression/lean;
-3. constrained spring rattle with product inertia;
-4. subtle interior-light response;
-5. short suspense settle;
-6. CLUNK with tray kick rather than another full-machine shake;
-7. clean restoration to the exact starting pivot/state.
+The audit guards:
 
-Shake magnitude scales modestly with Overdrive/combo data when present and remains deliberately sub-stud. The controller uses `xpcall` plus a restoration path so an interrupted animation does not leave a machine, tray, lights or keypad in a mutated client state.
+- manifest category persistence;
+- all five SoundGroups;
+- cooldown/concurrency architecture;
+- rarity ducking;
+- global GUI audio wiring;
+- positional vending cues;
+- rarity audio integration;
+- no dynamic untrusted asset import in the audio manifest.
 
-## QA tooling and CI added this run
+Added `AUDIO_AUDIT.md` with the source architecture, spam/performance controls and honest published-experience verification boundary.
 
-`tools/presentation_check.py` now fails if authored presentation exists but is no longer wired into runtime. It checks WorldBuilder → MachineArtDirector integration, machine fascia/product/control/tray hardware markers, staged interaction markers, and authored collection UI bootstrap wiring.
+## Regression failure found and fixed during this run
 
-The existing parsers in `tools/static_check.py` and `tools/loop_sim.py` were repaired for the current compact one-line `ItemDefinitions.lua` format. The assertions were not weakened: both tools still require exactly 60 launch items and 10 items for each of the six machines.
+The first post-change CI run found an existing presentation-audit false failure: `tools/presentation_check.py` expected spaced source text `MachineArtDirector = require(...)`, while current compact `WorldBuilder.lua` correctly uses `MachineArtDirector=require(...)`.
 
-`.github/workflows/shake-vending-production-checks.yml` now runs on production-branch source changes with read-only repository permissions:
+This was not ignored or relabeled. The audit marker was corrected to the actual persisted formatting and CI was rerun.
 
-```bash
-python tools/static_check.py
-python tools/presentation_check.py
-python tools/visual_quality_check.py
-python tools/loop_sim.py
-```
+## Validation performed
 
-## Validation performed in this run
+Direct container checkout still cannot resolve `github.com`, so no local checkout result is claimed. GitHub Actions was used to test the exact persisted branch.
 
-The production branch was inspected before changes at commit `a252ec23c70c5dec1aba988d2e244f65ff6bb98d`.
+Production workflow run **#23** (`0042a2720f400e0ef073d406db14093ac92d82e8`) completed successfully after the audit fix:
 
-A direct local checkout from the execution container could not resolve `github.com`; that limitation was not treated as a pass. GitHub Actions was then added so the exact persisted branch could be checked independently.
+- `python tools/static_check.py` — PASS
+- `python tools/presentation_check.py` — PASS
+- `python tools/visual_quality_check.py` — PASS
+- `python tools/audio_quality_check.py` — PASS
+- `python tools/loop_sim.py` — PASS
 
-The CI run for commit `8c993c6ffd0e36247891a7789022aa9393d53bc9` completed successfully across all four checks.
-
-### Static structural audit — PASS
-
-```text
-ShakeVM static audit
-  items: 60 | per machine: 10 each across CornerStore, SugarRush, Energy, ToyCapsule, Luxury, Unknown
-  mutations: 12 + None
-  creator-store base assets: 49
-  lua files: 52
-PASS: referential integrity, feature markers, runtime asset safety, and lightweight structural checks.
-```
-
-### Presentation persistence audit — PASS
+Static audit retained:
 
 ```text
-world art wiring: OK
-machine authored fascia: OK
-staged physical interaction: OK
-authored collection UI wiring: OK
-PASS: authored presentation systems are persisted and wired into runtime entry points.
+60 launch items
+10 items per machine x 6
+12 mutations + None
+49 Creator Store base assets
+52 Lua files
 ```
 
-### Visual-quality source guardrails — PASS
+The progression simulation remains a static deterministic simulation, not a Roblox Studio playtest.
 
-```text
-PASS: authored machine kitbash, staged physical interaction, distinct Downtown districts,
-HUD/collection hierarchy, safe donor extraction, UI identity, and reveal-language guardrails present.
-```
+## Remaining highest-impact blockers
 
-### Progression loop simulation — PASS
+The project is **not release-certified** and must not be labeled Pet Simulator/Bubble Gum Simulator quality based on source checks alone.
 
-1,000 deterministic-seed fast-seller upper-bound runs:
+1. **Studio visual QA of all six vending machines** — donor orientation, fascia alignment, glass/product clipping, tray/drop placement, pivot/collision and machine-scale judgment.
+2. **Studio item QA for all 60 donors** — reveal, catalog viewport, wearable and showcase context; replace mismatches rather than accepting merely-loadable assets.
+3. **World-art judgment in a real player camera** — screenshot/composition/readability against the master prompt; the prior screenshot failure proves static code markers are insufficient.
+4. **Audio curation/listening** — verify current IDs remain permitted, replace provisional reused sounds with individually-curated verified free donors, add appropriate light retail background music, and tune on phone/headphones/desktop.
+5. **Mobile/tablet/gamepad safe-area/focus QA** on Studio emulators and real devices.
+6. **Low-end profiling** with large inventory, multiple players, showcases and high-tier effects.
+7. **Published-service QA** for DataStore/MemoryStore/MessagingService and two-player trade/disconnect reconciliation.
+8. Continue removing any duplicate/competing presentation behavior discovered in Studio rather than relying on automated source gates.
 
-| Machine | P10 | Median | P90 | Reach by 75m |
-| --- | ---: | ---: | ---: | ---: |
-| Sugar Rush | 1:53 | 2:48 | 3:25 | 100% |
-| Energy | 3:27 | 4:44 | 5:39 | 100% |
-| Toy Capsule | 10:40 | 13:44 | 15:36 | 100% |
-| Luxury | 25:44 | 32:00 | 35:42 | 100% |
-
-Median unique discoveries at 75 minutes: **31**.
-
-This is a static economy/progression simulation, not a Roblox Studio playtest.
-
-## Production documentation persisted
-
-- `FINAL_CHANGELOG.md`
-- `REFERENCE_NOTES.md`
-- `ASSET_CREDITS.md`
-- `VISUAL_ASSET_AUDIT.md`
-- `MODEL_QA.md`
-- `ECONOMY_AUDIT.md`
-- `PERFORMANCE_AUDIT.md`
-- `STUDIO_VISUAL_QA.md`
-- `KNOWN_LIMITATIONS.md`
-- `PLAY_IN_STUDIO.md`
-- `LOOP_AUDIT.md`
-
-`ASSET_CREDITS.md` preserves manifest IDs while leaving unverified Creator Store creator/title metadata pending instead of inventing it. `STUDIO_VISUAL_QA.md` must continue to mark in-engine checks NOT RUN until they actually occur.
-
-## Remaining blockers before final package
-
-The source passes the current automated structural/presentation/economy suite, but it is **not visually release-certified**.
-
-Highest remaining gates:
-
-1. Roblox Studio visual QA of all six runtime-kitbashed vending machines: donor orientation, fascia alignment, glass/product clipping, tray/drop-spawn placement, collision hulls and pivots.
-2. Studio visual QA of all 60 item donors in collection/reveal/showcase contexts; replace mismatched donors rather than accepting them because an ID loads.
-3. Further world-art judgment in Studio. The six-district composition, district art director, premium donor facades and street decor exist, but the overall scene still needs real-camera comparison against the master prompt's front-page commercial-district bar.
-4. Audio asset permissions/mix and reveal timing in a published experience.
-5. Mobile/tablet/gamepad safe-area and focus QA on actual Studio emulation/devices.
-6. Low-end performance profiling with 100+ inventory items, multiple players, effects and showcases.
-7. Published DataStore/MemoryStore/MessagingService behavior and two-player trade/disconnect reconciliation.
-
-Do not package or label `shake-vending-game-ULTIMATE.zip` as final until these gates are honestly cleared, or until a package is explicitly requested as a test build rather than a release-certified build.
+Do not produce or claim `shake-vending-game-ULTIMATE.zip` as final until the in-engine gates above are honestly cleared, unless the package is explicitly labeled a test/review build.
