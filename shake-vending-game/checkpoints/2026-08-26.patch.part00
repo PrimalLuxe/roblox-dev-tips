@@ -1,0 +1,192 @@
+diff -ruN '--exclude=rojo.exe' /mnt/data/shake_vending_orig/shake-vending-game-FINAL/default.project.json /mnt/data/shake_vending_work/shake-vending-game-FINAL/default.project.json
+--- /mnt/data/shake_vending_orig/shake-vending-game-FINAL/default.project.json	2026-08-26 02:41:28.000000000 +0000
++++ /mnt/data/shake_vending_work/shake-vending-game-FINAL/default.project.json	2026-08-26 15:56:45.814065728 +0000
+@@ -12,6 +12,9 @@
+       "StarterPlayerScripts": {
+         "$path": "src/StarterPlayer/StarterPlayerScripts"
+       }
++    },
++    "ReplicatedFirst": {
++      "$path": "src/ReplicatedFirst"
+     }
+   }
+ }
+diff -ruN '--exclude=rojo.exe' /mnt/data/shake_vending_orig/shake-vending-game-FINAL/src/ReplicatedFirst/Loading.client.lua /mnt/data/shake_vending_work/shake-vending-game-FINAL/src/ReplicatedFirst/Loading.client.lua
+--- /mnt/data/shake_vending_orig/shake-vending-game-FINAL/src/ReplicatedFirst/Loading.client.lua	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/shake_vending_work/shake-vending-game-FINAL/src/ReplicatedFirst/Loading.client.lua	2026-08-26 16:00:33.647394097 +0000
+@@ -0,0 +1,228 @@
++local ReplicatedFirst = game:GetService("ReplicatedFirst")
++local ReplicatedStorage = game:GetService("ReplicatedStorage")
++local Players = game:GetService("Players")
++local ContentProvider = game:GetService("ContentProvider")
++local TweenService = game:GetService("TweenService")
++local RunService = game:GetService("RunService")
++
++local player = Players.LocalPlayer
++ReplicatedFirst:RemoveDefaultLoadingScreen()
++
++local MAX_WAIT = 28
++local MAX_PRELOAD = 96
++local STARTED = os.clock()
++
++local gui = Instance.new("ScreenGui")
++gui.Name = "OlympusLoading"
++gui.IgnoreGuiInset = true
++gui.ResetOnSpawn = false
++gui.DisplayOrder = 10000
++gui.Parent = player:WaitForChild("PlayerGui")
++
++local root = Instance.new("Frame")
++root.Size = UDim2.fromScale(1,1)
++root.BackgroundColor3 = Color3.fromRGB(9,11,15)
++root.BorderSizePixel = 0
++root.Parent = gui
++
++local grain = Instance.new("Frame")
++grain.Size = UDim2.fromScale(1,1)
++grain.BackgroundColor3 = Color3.fromRGB(255,255,255)
++grain.BackgroundTransparency = 0.985
++grain.BorderSizePixel = 0
++grain.Parent = root
++
++local wordmark = Instance.new("Frame")
++wordmark.AnchorPoint = Vector2.new(0.5,0.5)
++wordmark.Position = UDim2.fromScale(0.5,0.45)
++wordmark.Size = UDim2.fromOffset(760,160)
++wordmark.BackgroundTransparency = 1
++wordmark.Parent = root
++
++local titleLayout = Instance.new("UIListLayout")
++titleLayout.FillDirection = Enum.FillDirection.Horizontal
++titleLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
++titleLayout.VerticalAlignment = Enum.VerticalAlignment.Center
++titleLayout.Padding = UDim.new(0,2)
++titleLayout.Parent = wordmark
++
++local letters = {}
++local function makeLetter(char, index)
++    local l = Instance.new("TextLabel")
++    l.Name = "L"..index
++    l.Size = UDim2.fromOffset(char == " " and 16 or 48, 78)
++    l.BackgroundTransparency = 1
++    l.Text = char
++    l.TextColor3 = Color3.fromRGB(247,249,252)
++    l.TextStrokeColor3 = Color3.fromRGB(16,20,28)
++    l.TextStrokeTransparency = 0.45
++    l.Font = Enum.Font.GothamBlack
++    l.TextSize = 51
++    l.TextTransparency = 1
++    l.Rotation = ((index % 3) - 1) * 2.2
++    l.Parent = wordmark
++    table.insert(letters,l)
++end
++for i=1,#"OLYMPUS ENTERTAINMENT" do makeLetter(string.sub("OLYMPUS ENTERTAINMENT",i,i),i) end
++
++local status = Instance.new("TextLabel")
++status.AnchorPoint = Vector2.new(0.5,1)
++status.Position = UDim2.new(0.5,0,1,-42)
++status.Size = UDim2.fromOffset(430,28)
++status.BackgroundTransparency = 1
++status.Text = "STARTING SERVER"
++status.TextColor3 = Color3.fromRGB(159,171,190)
++status.Font = Enum.Font.GothamBold
++status.TextSize = 13
++status.TextXAlignment = Enum.TextXAlignment.Center
++status.Parent = root
++
++local track = Instance.new("Frame")
++track.AnchorPoint = Vector2.new(0.5,1)
++track.Position = UDim2.new(0.5,0,1,-26)
++track.Size = UDim2.fromOffset(330,5)
++track.BackgroundColor3 = Color3.fromRGB(40,47,59)
++track.BorderSizePixel = 0
++track.Parent = root
++local tc = Instance.new("UICorner"); tc.CornerRadius=UDim.new(1,0); tc.Parent=track
++local fill = Instance.new("Frame")
++fill.Size = UDim2.fromScale(0,1)
++fill.BackgroundColor3 = Color3.fromRGB(240,196,67)
++fill.BorderSizePixel = 0
++fill.Parent = track
++local fc = Instance.new("UICorner"); fc.CornerRadius=UDim.new(1,0); fc.Parent=fill
++
++local function setProgress(done,total,label)
++    local ratio = total > 0 and math.clamp(done/total,0,1) or 0
++    TweenService:Create(fill,TweenInfo.new(0.12,Enum.EasingStyle.Quad),{Size=UDim2.fromScale(ratio,1)}):Play()
++    status.Text = string.format("%s • %d%%", label or "LOADING WORLD", math.floor(ratio*100+0.5))
++end
++
++-- The loading cover appears immediately, but give profile attributes a short chance to replicate
++-- before deciding whether a returning player should receive the full studio intro.
++local profileWaitDeadline=os.clock()+2.5
++while player:GetAttribute("ShakeVM_IntroSeen")==nil and os.clock()<profileWaitDeadline do
++    status.Text="LOADING PLAYER PROFILE"
++    RunService.Heartbeat:Wait()
++end
++local introSeen = player:GetAttribute("ShakeVM_IntroSeen") == true
++local reducedEffects = player:GetAttribute("ShakeVM_ReducedEffects") == true
++for i,l in ipairs(letters) do
++    local delayTime = introSeen and 0.008 or 0.026
++    task.delay((i-1)*delayTime,function()
++        if not l.Parent then return end
++        l.Position = UDim2.fromOffset(0,-18)
++        l.TextTransparency = 0
++        TweenService:Create(l,TweenInfo.new(introSeen and 0.10 or 0.22,Enum.EasingStyle.Back,Enum.EasingDirection.Out),{Position=UDim2.fromOffset(0,0),Rotation=0}):Play()
++    end)
++end
++
++local function collectContentIds()
++    local ids, seen = {}, {}
++    local function add(id)
++        if type(id) ~= "string" or id == "" or seen[id] then return end
++        if not string.find(id,"rbxasset",1,true) and not string.find(id,"http",1,true) then return end
++        seen[id]=true
++        table.insert(ids,id)
++    end
++    local function scan(rootObj)
++        for _,d in ipairs(rootObj:GetDescendants()) do
++            if d:IsA("MeshPart") then add(d.TextureID)
++            elseif d:IsA("Decal") or d:IsA("Texture") then add(d.Texture)
++            elseif d:IsA("ImageLabel") or d:IsA("ImageButton") then add(d.Image)
++            elseif d:IsA("ParticleEmitter") or d:IsA("Beam") or d:IsA("Trail") then add(d.Texture)
++            elseif d:IsA("Sound") then add(d.SoundId)
++            end
++            if #ids >= MAX_PRELOAD then return end
++        end
++    end
++    local assets = ReplicatedStorage:FindFirstChild("Assets")
++    if assets then scan(assets) end
++    local hub = workspace:FindFirstChild("ShakeHub")
++    if hub and #ids < MAX_PRELOAD then scan(hub) end
++    return ids
++end
++
++while os.clock()-STARTED < MAX_WAIT do
++    local characterReady = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
++    local serverReady = ReplicatedStorage:GetAttribute("ShakeVM_ServerBootReady") == true
++    if characterReady and serverReady then break end
++    local elapsed = os.clock()-STARTED
++    local warmRatio = math.clamp(elapsed / 10,0,0.35)
++    fill.Size = UDim2.fromScale(warmRatio,1)
++    status.Text = serverReady and "PREPARING PLAYER" or "BUILDING VENDING DISTRICT"
++    RunService.Heartbeat:Wait()
++end
++
++local ids = collectContentIds()
++if #ids > 0 then
++    local completed = 0
++    local nextIndex = 1
++    local workers = math.min(6,#ids)
++    for _=1,workers do
++        task.spawn(function()
++            while true do
++                local i = nextIndex
++                nextIndex += 1
++                local id = ids[i]
++                if not id then break end
++                pcall(function() ContentProvider:PreloadAsync({id}) end)
++                completed += 1
++            end
++        end)
++    end
++    while completed < #ids and os.clock()-STARTED < MAX_WAIT do
++        setProgress(completed,#ids,"LOADING 
