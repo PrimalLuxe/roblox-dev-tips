@@ -1,0 +1,64 @@
+return {
+    Version = 3,
+    Coins = 125,
+    CollectionScore = 0,
+    StyleShards = 0,
+    Upgrades = {
+        ShakePower = 1,
+        Luck = 1,
+        MutationLuck = 1,
+        Capacity = 1,
+        CollectionBonus = 1,
+    },
+    Inventory = {},
+    UnlockedMachines = { CornerStore = true },
+
+    -- Collection tracks every base+mutation discovered. BaseCollection drives the 60-item catalog.
+    Collection = {},
+    BaseCollection = {},
+    CosmeticUnlocks = {},
+    SetRewards = {},
+
+    Progression = {
+        LuckyMeter = 0,
+        CollectionMilestones = {},
+        MachineShakes = {},
+        MachineMilestones = {},
+        DiscoveryBonusCoins = 0,
+        Rank = 1,
+        RankGoals = {},
+        DailyRewards = {DayKey="", Playtime=0, Claimed={}},
+    },
+
+    Equipped = {
+        Head = nil, Face = nil, ShoulderLeft = nil, ShoulderRight = nil, Back = nil,
+        Aura = nil, Trail = nil, Nameplate = nil, Title = nil,
+    },
+    OutfitSlots = {{}, {}, {}},
+    Showcase = {nil, nil, nil, nil, nil, nil},
+    Favorites = {},
+    Statistics = {
+        Shakes = 0,
+        ItemsCollected = 0,
+        SecretsFound = 0,
+        GlobalsFound = 0,
+        TradesCompleted = 0,
+        TotalSold = 0,
+    },
+    TradeSettings = {
+        Enabled = true,
+    },
+    Settings = {
+        EffectQuality = "High",
+        ReducedEffects = false,
+        ReducedScreenShake = false,
+        SkipLongReveals = false,
+        MusicEnabled = true,
+        SFXEnabled = true,
+        IntroSeen = false,
+    },
+    PendingTrades = {},
+    CompletedTrades = {},
+    CreatedAt = 0,
+    LastSeenAt = 0,
+}
