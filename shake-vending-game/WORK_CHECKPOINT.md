@@ -5,29 +5,31 @@
 - Repository: `PrimalLuxe/roblox-dev-tips`
 - Branch: `shake-vending-production`
 - Folder: `shake-vending-game`
-- Source of truth for current work: latest uploaded **Front-Page Production Overhaul Master Prompt**.
+- Source of truth: latest uploaded **Shake a Vending Machine — Front-Page Production Overhaul Master Prompt**.
 
-## Implemented and persisted
+## Runtime persistence status
+
+The release-critical text runtime is now mirrored into the persistent branch, including the two previously missing client boot dependencies: `UIController.lua` and `DropVisualController.lua`. `ClientBootstrap.client.lua` can now resolve its UI, reveal, machine, trade, inspect, audio, onboarding, showcase and WorldLoop controller requirements from the branch instead of relying on an external baseline.
+
+This run also synchronized older branch copies of DataService, RemoteService, SettingsService and UpgradeService and persisted the previously absent AssetLoad, Inventory, Global, Roll, Engagement, Trading, Cosmetic and Showcase services.
+
+## Major production state
 
 - Profile/data progression v5 with Vending Passport and 3-slot Hunt List.
-- Downtown launch-world definitions and multi-goal machine unlock requirements.
-- Event-only Unknown machine behavior and physical Passport kiosk entry point.
-- Server-authoritative Hunt/Passport remotes and stamp validation.
-- Creator Store asset loading through `AssetService:LoadAssetAsync`, donor sanitization, bounded startup phases, and loud failure diagnostics.
-- `ItemVisualFactory` now uses sanitized donors and returns `nil` when no suitable donor exists; the old red-neon `MISSING_CREATOR_ASSET_*` fake collectible has been removed.
-- Cosmetic/aura/trail wearables are nil-safe when an external donor is unavailable.
-- Showcase service is persisted with six editable slots, rarest-item centerpiece, inspect plaques, and missing-donor safety.
-- Inventory service is persisted with auto-lock, favorites/equipped/showcase protection, keep-one-each mass-sell behavior, duplicate selling, and shard conversion.
-- Roll service is persisted with server authority plus both obtained-roll (`OneIn`) and natural-pool (`NaturalOneIn`) odds.
-- Global service is persisted with MemoryStore hourly rare board and MessagingService rare-drop feed.
-- Engagement service is persisted with combo state and server-timed playtime gifts.
-- Trading service is persisted with join/playtime gates, capacity checks, revalidation, journaled transfer, confirmation reset, countdown, and reconciliation path.
-- Client trade UX and player inspect controller are persisted.
-- Existing branch already contains phased loading, audio/VFX manifests, onboarding, machine presentation, WorldLoopController, WorldBuilder, and Passport kiosk wiring.
+- Downtown launch world, multi-goal machine unlocks and event-only Unknown machine.
+- Server-authoritative Hunt/Passport, roll, inventory, upgrades, settings and trading actions.
+- Truthful obtained-roll (`OneIn`) and natural-pool (`NaturalOneIn`) odds.
+- Creator Store loading through `AssetService:LoadAssetAsync` with phased startup and donor sanitization.
+- Missing Creator Store item donors now warn and omit the visual; fake `MISSING_CREATOR_ASSET_*` geometry is removed.
+- Protected mass selling, auto-lock, keep-one-each, favorites, shards, equipment and showcase references.
+- Responsive HUD/collection UI with catalog search/sort, viewport inspection, sell confirmation, upgrades, global board, settings and gamepad Back.
+- Local/world reward reveal controller with hover/touch/gamepad pickup, rarity billboards, highlights, particles, screen rarity reveal and distance-bounded world VFX.
+- Wearable collectibles, auras, trails, titles, outfit slots, six editable showcase pedestals and rarest-item centerpiece.
+- Journaled two-stage trading with revalidation, capacity checks, READY reset, CONFIRM countdown and interrupted-commit reconciliation.
+- MemoryStore hourly rare board, MessagingService cross-server rare feed, restock events, cooperative Jammed progress, combo state and server-timed playtime gifts.
+- DataStore autosave snapshot-rewind race fixed; centralized token-bucket remote limiting present.
 
-## Static validation actually run
-
-From the complete working tree:
+## Validation actually run after the client refactor
 
 ```text
 ShakeVM static audit
@@ -38,11 +40,9 @@ ShakeVM static audit
 PASS: referential integrity, feature markers, runtime asset safety, and lightweight structural checks.
 ```
 
-The local regression gate also checks bootstrap-required module persistence, WorldLoop initialization, truthful odds fields, centralized remote throttling, destructive-sell confirmation routing, and prevents the removed `MISSING_CREATOR_ASSET_` placeholder from returning.
+`tools/static_check.py` verifies required bootstrap modules exist, WorldLoop is initialized, Creator Store procedural/fake-item regressions do not return, truthful odds fields remain, destructive bulk selling stays behind client confirmation, centralized remote limiting exists, onboarding completion persists, and gamepad/showcase/Jammed interaction markers remain.
 
-## Loop simulation actually run
-
-Fast-seller upper-bound simulation:
+Fast-seller upper-bound loop simulation after the refactor:
 
 | Machine | P10 | Median | P90 | Reach by 75m |
 | --- | ---: | ---: | ---: | ---: |
@@ -53,22 +53,19 @@ Fast-seller upper-bound simulation:
 
 Median unique discoveries at 75 minutes: **31**.
 
-## Persistence blocker still open
+## Documentation persisted this run
 
-The tested working tree is **not yet fully mirrored into GitHub**. Two large release-critical client modules remain absent from the branch:
+- `FINAL_CHANGELOG.md`
+- `MODEL_QA.md`
+- `PERFORMANCE_AUDIT.md`
+- `STUDIO_VISUAL_QA.md`
+- `KNOWN_LIMITATIONS.md`
+- `PLAY_IN_STUDIO.md`
 
-- `src/StarterPlayer/StarterPlayerScripts/Controllers/UIController.lua` (~60 KB)
-- `src/StarterPlayer/StarterPlayerScripts/Controllers/DropVisualController.lua` (~26 KB)
+`STUDIO_VISUAL_QA.md` deliberately marks all in-engine checks NOT RUN instead of inventing visual/device QA.
 
-They exist in the tested working tree and contain the current collection/inventory UI and nil-safe reveal changes, but until they are persisted the branch is not a self-contained playable source checkout. Do not package a final release ZIP from the branch yet.
+## Remaining blockers before final package
 
-## Required next work
+The runtime/source-persistence blocker is resolved, but the release is **not** fully certified. Roblox Studio/Luau runtime execution was unavailable in this run. Required in-engine checks still include Creator Store donor appearance/pivots/permissions, collisions/tray alignment, audio permissions/mix, mobile/gamepad layout on real emulation/devices, low-end performance profiling, published DataStore/MemoryStore/MessagingService behavior and two-player trade/disconnect reconciliation.
 
-1. Persist `UIController.lua` and `DropVisualController.lua`, then run the bootstrap/source-persistence regression against a fresh branch checkout.
-2. Persist the newest expanded `tools/static_check.py` guardrails if its branch copy is older.
-3. Complete/update final documentation (`FINAL_CHANGELOG`, `MODEL_QA`, `PERFORMANCE_AUDIT`, `STUDIO_VISUAL_QA`, `KNOWN_LIMITATIONS`, `PLAY_IN_STUDIO`).
-4. Perform final source audit and package `shake-vending-game-ULTIMATE.zip` only after the branch is self-contained.
-
-## Honest limitation
-
-Roblox Studio was not available in this run. No in-engine visual, collision, device, audio-permission, Creator Store donor-content, DataStore/MemoryStore/MessagingService, or multiplayer trade QA is claimed. Those remain **UNVERIFIED IN ENGINE** until run in Studio/published test servers.
+Final documentation/provenance files from the master prompt still need to be mirrored/refreshed on the branch where absent (`REFERENCE_NOTES.md`, `ASSET_CREDITS.md`, `VISUAL_ASSET_AUDIT.md`). Final ZIP packaging must wait until the Studio verification matrix is actually executed; do not label the current branch visually release-ready yet.
